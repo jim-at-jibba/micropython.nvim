@@ -1,6 +1,6 @@
 local M = {}
 
-M.extra = 'printf "\\\\n\\\\033[0;33mPlease Press ENTER to continue \\\\033[0m"; read'
+M.extra = 'printf "\\\\n\\\\033[0;33mPlease Press ENTER to continue \\\\033[0m"; read' 
 
 -- NOTE(JGB): Cant get this to work without printing to the screen
 function M.ampy_install_check()
