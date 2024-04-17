@@ -1,6 +1,6 @@
 local M = {}
 
-local utils = require('micropython.nvim.utils')
+local utils = require('micropython_nvim.utils')
 local Terminal = require('toggleterm.terminal').Terminal
 
 -- function M.piobuild()
@@ -25,10 +25,10 @@ local Terminal = require('toggleterm.terminal').Terminal
 -- end
 
 function M.mprun()
-  if not utils.ampy_install_check() then
-    return
-  end
-  local command = 'ampy run  ' .. vim.api.nvim_buf_get_name(0) -- .. utils.extra
+  -- if not utils.ampy_install_check() then
+  --   return
+  -- end
+  local command = 'ampy run  ' .. vim.api.nvim_buf_get_name(0) .. '; ' .. utils.extra
   local term = Terminal:new({ cmd = command, direction = 'float' })
   term:toggle()
 end
