@@ -7,6 +7,10 @@ function M.run()
   run.mprun()
 end
 
+function M.upload_current()
+  run.mp_upload_current()
+end
+
 function M.set_baud_rate()
   setup.show_baud_rate_list()
 end

@@ -38,4 +38,15 @@ function M.mprun()
   term:toggle()
 end
 
+function M.mp_upload_current()
+  -- if not utils.ampy_install_check() then
+  --   return
+  -- end
+  local ampy_assembled_command =
+    string.format('ampy -p %s -b %s put %s %s', port, baud_rate, filepath, utils.extra)
+  print(ampy_assembled_command)
+  local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
+  term:toggle()
+end
+
 return M
