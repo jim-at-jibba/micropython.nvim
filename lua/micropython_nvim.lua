@@ -7,8 +7,12 @@ function M.run()
   run.mprun()
 end
 
-function M.setBaudRate()
+function M.set_baud_rate()
   setup.show_baud_rate_list()
+end
+
+function M.set_port()
+  setup.set_port()
 end
 
 return M
