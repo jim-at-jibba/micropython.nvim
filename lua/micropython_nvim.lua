@@ -1,7 +1,12 @@
 local run = require('micropython_nvim.run')
 local setup = require('micropython_nvim.setup')
+local utils = require('micropython_nvim.utils')
 
 local M = {}
+
+function M.setup()
+  utils.readAmpyConfig()
+end
 
 function M.run()
   run.mprun()

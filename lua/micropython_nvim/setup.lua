@@ -26,7 +26,7 @@ end
 function M.set_baud_rate(baud_rate)
   baud_rate = baud_rate or '9600'
   -- Sets the baud rate for the ampy command in the shell
-  vim.cmd('let $AMPY_BAUD = "' .. baud_rate .. '"')
+  _G['AMPY_BAUD'] = baud_rate
   vim.notify('Baud rate set to: ' .. baud_rate, vim.log.levels.INFO)
 end
 
@@ -70,7 +70,7 @@ end
 function M.set_port_var(port)
   port = port or '9600'
   -- Sets the port for the ampy command in the shell
-  vim.cmd('let $AMPY_PORT = "' .. port .. '"')
+  _G['AMPY_PORT'] = port
   vim.notify('Port set to: ' .. port, vim.log.levels.INFO)
 end
 
