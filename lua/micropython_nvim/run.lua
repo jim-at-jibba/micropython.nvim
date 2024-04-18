@@ -2,8 +2,6 @@ local M = {}
 
 local utils = require('micropython_nvim.utils')
 local Terminal = require('toggleterm.terminal').Terminal
-local port = vim.g.AMPY_PORT or '/dev/ttyUSB0'
-local baud_rate = vim.g.AMPY_BAUD or '115200'
 local filepath = vim.api.nvim_buf_get_name(0)
 
 -- function M.piobuild()
@@ -31,8 +29,13 @@ function M.mprun()
   -- if not utils.ampy_install_check() then
   --   return
   -- end
-  local ampy_assembled_command =
-    string.format('ampy -p %s -b %s run %s %s', port, baud_rate, filepath, utils.extra)
+  local ampy_assembled_command = string.format(
+    'ampy -p %s -b %s run %s %s',
+    _G['AMPY_PORT'],
+    _G['AMPY_BAUD'],
+    filepath,
+    utils.extra
+  )
   print(ampy_assembled_command)
   local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
   term:toggle()
@@ -42,8 +45,13 @@ function M.mp_upload_current()
   -- if not utils.ampy_install_check() then
   --   return
   -- end
-  local ampy_assembled_command =
-    string.format('ampy -p %s -b %s put %s %s', port, baud_rate, filepath, utils.extra)
+  local ampy_assembled_command = string.format(
+    'ampy -p %s -b %s put %s %s',
+    _G['AMPY_PORT'],
+    _G['AMPY_BAUD'],
+    filepath,
+    utils.extra
+  )
   print(ampy_assembled_command)
   local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
   term:toggle()

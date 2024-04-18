@@ -62,7 +62,7 @@ function M.set_port()
     end
 
     -- set the baud rate in the global variable
-    vim.g.AMPY_PORT = choice
+    _G['AMPY_PORT'] = choice
     -- M.set_baud_rate(choice)
   end)
 end
