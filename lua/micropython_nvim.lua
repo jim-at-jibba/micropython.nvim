@@ -1,8 +1,13 @@
 local run = require('micropython_nvim.run')
 local setup = require('micropython_nvim.setup')
 local utils = require('micropython_nvim.utils')
+local repl = require('micropython_nvim.repl')
 
 local MP = {}
+
+function MP.repl()
+  repl.repl()
+end
 
 function MP.run()
   run.mprun()
@@ -35,6 +40,7 @@ function MP.initialise()
   vim.api.nvim_create_user_command('MPUpload', MP.upload_current, {})
   vim.api.nvim_create_user_command('MPSetBaud', MP.set_baud_rate, {})
   vim.api.nvim_create_user_command('MPSetPort', MP.set_port, {})
+  vim.api.nvim_create_user_command('MPRepl', MP.repl, {})
 end
 
 return MP
