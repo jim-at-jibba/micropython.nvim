@@ -1,7 +1,1 @@
-local plugin = require('micropython_nvim')
-
-plugin.setup()
-vim.api.nvim_create_user_command('MPRun', plugin.run, {})
-vim.api.nvim_create_user_command('MPUpload', plugin.upload_current, {})
-vim.api.nvim_create_user_command('MPSetBaud', plugin.set_baud_rate, {})
-vim.api.nvim_create_user_command('MPSetPort', plugin.set_port, {})
+require('micropython_nvim').initialise()
