@@ -30,10 +30,10 @@ function M.mprun()
   --   return
   -- end
   local ampy_assembled_command = string.format(
-    'ampy -p %s -b %s run %s %s',
+    'ampy -p %s -b %s run %s; %s',
     _G['AMPY_PORT'],
     _G['AMPY_BAUD'],
-    filepath,
+    vim.api.nvim_buf_get_name(0),
     utils.extra
   )
   print(ampy_assembled_command)
@@ -46,10 +46,10 @@ function M.mp_upload_current()
   --   return
   -- end
   local ampy_assembled_command = string.format(
-    'ampy -p %s -b %s put %s %s',
+    'ampy -p %s -b %s put %s; %s',
     _G['AMPY_PORT'],
     _G['AMPY_BAUD'],
-    filepath,
+    vim.api.nvim_buf_get_name(0),
     utils.extra
   )
   print(ampy_assembled_command)
