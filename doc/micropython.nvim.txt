@@ -1,61 +1,101 @@
-*nvim-plugin-template.txt*     For NVIM v0.8.0     Last change: 2023 August 05
+*micropython.nvim.txt*        For NVIM v0.8.0       Last change: 2024 April 19
 
 ==============================================================================
-Table of Contents                     *nvim-plugin-template-table-of-contents*
+Table of Contents                         *micropython.nvim-table-of-contents*
 
-1. nvim-plugin-template            |nvim-plugin-template-nvim-plugin-template|
-  - Usage                    |nvim-plugin-template-nvim-plugin-template-usage|
-  - Format                  |nvim-plugin-template-nvim-plugin-template-format|
-  - Test                      |nvim-plugin-template-nvim-plugin-template-test|
-  - Ci                          |nvim-plugin-template-nvim-plugin-template-ci|
-  - More                      |nvim-plugin-template-nvim-plugin-template-more|
-  - License MIT        |nvim-plugin-template-nvim-plugin-template-license-mit|
+1. micropython_nvim                        |micropython.nvim-micropython_nvim|
+  - Introduction              |micropython.nvim-micropython_nvim-introduction|
+  - Goals                            |micropython.nvim-micropython_nvim-goals|
+  - Features                      |micropython.nvim-micropython_nvim-features|
+  - Requirements              |micropython.nvim-micropython_nvim-requirements|
+  - Quickstart                  |micropython.nvim-micropython_nvim-quickstart|
+  - Installation              |micropython.nvim-micropython_nvim-installation|
+  - Usage                            |micropython.nvim-micropython_nvim-usage|
 
 ==============================================================================
-1. nvim-plugin-template            *nvim-plugin-template-nvim-plugin-template*
-
-neovim plugin template integration test and doc publish
+1. micropython_nvim                        *micropython.nvim-micropython_nvim*
 
 
-USAGE                        *nvim-plugin-template-nvim-plugin-template-usage*
+INTRODUCTION                  *micropython.nvim-micropython_nvim-introduction*
 
-1. click `use this template` button generate a repo on your github.
-2. clone your plugin repo.open terminal then cd plugin directory.
-3. run `python3 rename.py your-plugin-name` this will replace all `nvim-plugin-template` to your `pluing-name`.
-then it will prompt you input `y` or `n` to remove example codes in `init.lua` and
-`test/plugin_spec.lua`. if you are familiar this repo just input y. if you are first look at this
-template I suggest you look at them first. after these step the `rename.py` will also auto
-remove.
-
-now you have a clean plugin env. enjoy!
+micropython_nvim is a plugin that aims to make it easier and more enjoyable to
+work on micropython projects in Neovim. See the |micropython.nvim-quickstart|
+section to get started.
 
 
-FORMAT                      *nvim-plugin-template-nvim-plugin-template-format*
+GOALS                                *micropython.nvim-micropython_nvim-goals*
 
-format use `stylua` and provide `.stylua.toml`.
-
-
-TEST                          *nvim-plugin-template-nvim-plugin-template-test*
-
-use vusted for test install by using `luarocks --lua-version=5.1 install
-vusted` then run `vusted test` for your test cases.
-
-create test case in test folder file rule is `foo_spec.lua` with `_spec` more
-usage please check busted usage <https://lunarmodules.github.io/busted/>
+- Allows you to run and upload your python files directly to your chosen micro-controller straight from Neovim
+- Allows general file management
+- Allows easy management of port, baudrate, and other settings
+- Allows easy set up of project environment - COMING SOON
+    - Create a new project, with project specific settings
+- Easy access to the REPL
 
 
-CI                              *nvim-plugin-template-nvim-plugin-template-ci*
+FEATURES                          *micropython.nvim-micropython_nvim-features*
 
-Ci support auto generate doc from README and integration test and lint check by
-`stylua`.
-
-
-MORE                          *nvim-plugin-template-nvim-plugin-template-more*
-
-Other usage you can look at my plugins
+- **Run** local python files on your micro-controller
+- **Upload** local python files to your micro-controller
+- **REPL** access
+- **File management**
+- **Project management** - COMING SOON
 
 
-LICENSE MIT            *nvim-plugin-template-nvim-plugin-template-license-mit*
+REQUIREMENTS                  *micropython.nvim-micropython_nvim-requirements*
+
+- Neovim >= 0.9 <https://github.com/neovim/neovim/releases/tag/v0.9.0>
+- toggleterm.nvim <https://github.com/akinsho/toggleterm.nvim>
+- dressing.nvim <https://github.com/stevearc/dressing.nvim>(optional)
+
+
+QUICKSTART                      *micropython.nvim-micropython_nvim-quickstart*
+
+- |micropython.nvim-install| micropython_nvim using your preferred package manager
+- Add a keybind to `run` function
+
+>lua
+    -- Lua
+    vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
+<
+
+**Next steps**
+
+- Add a |micropython.nvim-statusline-component|
+
+
+INSTALLATION                  *micropython.nvim-micropython_nvim-installation*
+
+lazy.nvim ~
+
+>lua
+    {
+        "jim-at-jibba/micropython.nvim",
+        dependencies = { "akinsho/toggleterm.nvim", "stevearc/dressing.nvim" },
+    }
+<
+
+packer ~
+
+>lua
+    use {
+        "jim-at-jibba/micropython.nvim",
+        requires = { "akinsho/toggleterm.nvim", "stevearc/dressing.nvim" },
+    }
+<
+
+
+USAGE                                *micropython.nvim-micropython_nvim-usage*
+
+- `:MPRun` runs current buffer on the micro-controller
+- `:MPSetPort` sets the port
+- `:MPSetBaud` sets the baudrate
+- `:MPRepl` opens the REPL
+
+
+STATUSLINE ~
+
+A statusline component can be easily added to show whether a buffer is tagged.
 
 Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
 
