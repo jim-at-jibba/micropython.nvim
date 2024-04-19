@@ -41,6 +41,8 @@ micropython_nvim is a plugin that aims to make it easier and more enjoyable to w
 - [Neovim >= 0.9](https://github.com/neovim/neovim/releases/tag/v0.9.0)
 - [toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)
 - [dressing.nvim](https://github.com/stevearc/dressing.nvim)(optional)
+- [Adafruit ampy]()
+- [rshell]()
 
 ## Quickstart
 
@@ -124,18 +126,11 @@ require("lualine").setup({
 </tr>
 </table>
 
+## Manual project setup
 
-### Contributors
-
-Thanks to these wonderful people for their contributions!
-
-<a href="https://github.com/cbochs/grapple.nvim/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=cbochs/grapple.nvim" />
-</a>
 
 ## Inspiration and Thanks
 
-- ThePrimeagen's [harpoon](https://github.com/ThePrimeagen/harpoon)
-- stevearc's [oil.nvim](https://github.com/stevearc/oil.nvim)
+- [nvim-platformio.lua](https://github.com/anurag3301/nvim-platformio.lua)
 
 <!-- panvimdoc-ignore-end -->
