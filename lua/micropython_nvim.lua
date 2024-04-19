@@ -19,7 +19,7 @@ function MP.upload_current()
 end
 
 function MP.set_baud_rate()
-  setup.show_baud_rate_list()
+  setup.set_baud_rate()
 end
 
 function MP.set_port()

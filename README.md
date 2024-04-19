@@ -94,6 +94,7 @@ use {
 - `:MPRun` runs current buffer on the micro-controller
 - `:MPSetPort` sets the port, in both the `.ampy` configuration file and Neovim global variable
 - `:MPSetBaud` sets the baudrate in the `.ampy` configuration file and Neovim global variable
+- `:MPSetStubbs` sets the stubs for the board in `requirments.txt` ready for installation
 - `:MPRepl` opens the REPL
 - `:MPInit` initalizes the project with basic settings and files. See [project setup](#project-setup)
 
@@ -137,11 +138,11 @@ ruff
 }
 ```
 - `:MPSetPort` to set the port
-- `:MPSetBaud` to set the baudrate if the same as the default `115200`
+- `:MPSetStubbs` to set the stubs for the board
+- `:MPSetBaud` to set the baudrate if not the same as the default `115200`
 - `pip install -r requirments.txt` to install the required packages
 
 Now you be able to run the project using `:MPRun`.
-The inclusion of `micropython-rp2-stubs` is optional but highly recommended as it provides intellisense for the RP2 board.
 ### Statusline
 
 A statusline component can be easily added to show whether a buffer is tagged.

@@ -4,7 +4,7 @@ local M = {}
 --- This function displays a list of available baud rates for the MicroPython device.
 -- The baud rate is the rate at which information is transferred in a communication channel.
 -- In the context of MicroPython and Neovim, it's the speed at which Neovim communicates with the MicroPython device.
-function M.show_baud_rate_list()
+function M.set_baud_rate()
   local options = {
     '1200',
     '2400',
@@ -87,6 +87,9 @@ function M.set_port()
   end)
 end
 
+--- This function sets up stubs for the MicroPython environment in Neovim.
+-- Stubs are used to provide autocompletion and linting for MicroPython specific modules and functions.
+-- This function should be called during the setup phase of the plugin.
 function M.set_stubbs()
   local options = {
     'stm32',
