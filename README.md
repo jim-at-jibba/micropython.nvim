@@ -21,6 +21,8 @@ Theme: [duskfox](https://github.com/EdenEast/nightfox.nvim)
 
 micropython_nvim is a plugin that aims to make it easier and more enjoyable to work on micropython projects in Neovim. See the [quickstart](#quickstart) section to get started.
 
+N.B. If you open an existing project that has an `.ampy` configuration file in the root directory, the plugin will automatically configure the port and baud rate for you.
+
 ## Goals
 
 - Allows you to run and upload your python files directly to your chosen micro-controller straight from Neovim
@@ -90,8 +92,8 @@ use {
 ## Usage
 
 - `:MPRun` runs current buffer on the micro-controller
-- `:MPSetPort` sets the port
-- `:MPSetBaud` sets the baudrate
+- `:MPSetPort` sets the port, in both the `.ampy` configuration file and Neovim global variable
+- `:MPSetBaud` sets the baudrate in the `.ampy` configuration file and Neovim global variable
 - `:MPRepl` opens the REPL
 - `:MPInit` initalizes the project with basic settings and files. See [project setup](#project-setup)
 
