@@ -1,8 +1,9 @@
 local utils = require('micropython_nvim.utils')
 local M = {}
 
---- Shows a list of baud rates for the user to select from.
--- The selected baud rate is set as a global variable and passed to the set_baud_rate function.
+--- This function displays a list of available baud rates for the MicroPython device.
+-- The baud rate is the rate at which information is transferred in a communication channel.
+-- In the context of MicroPython and Neovim, it's the speed at which Neovim communicates with the MicroPython device.
 function M.show_baud_rate_list()
   local options = {
     '1200',
@@ -14,25 +15,25 @@ function M.show_baud_rate_list()
     '115200',
   }
 
-  vim.ui.select(options, {}, function(choice)
+  vim.ui.select(options, {
+    prompt = 'Select baud rate:',
+  }, function(choice)
     if not choice then
       print('No selection made')
       return
     end
 
     -- set the baud rate in the global variable
-    vim.g.AMPY_BAUD = choice
-    M.set_baud_rate(choice)
+    _G['AMPY_BAUD'] = choice
+    -- Remove the line containing AMPY_BAUD from the .ampy file
+    local cw_dir = vim.fn.getcwd()
+    local result = utils.replaceLine(cw_dir .. '/.ampy', 'AMPY_BAUD', 'AMPY_BAUD=' .. choice)
+    if result then
+      vim.notify('Baud rate set to: ' .. choice, vim.log.levels.INFO)
+    else
+      vim.notify('Failed to set baud rate', vim.log.levels.ERROR)
+    end
   end)
-end
-
---- Sets the baud rate for the ampy command in the shell.
--- @param baud_rate The baud rate to set. If not provided, defaults to '9600'.
-function M.set_baud_rate(baud_rate)
-  baud_rate = baud_rate or '9600'
-  -- Sets the baud rate for the ampy command in the shell
-  _G['AMPY_BAUD'] = baud_rate
-  vim.notify('Baud rate set to: ' .. baud_rate, vim.log.levels.INFO)
 end
 
 --- Gets a list of available ports.
