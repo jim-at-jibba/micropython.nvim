@@ -10,10 +10,10 @@ local pyrightConfigTemplate = [[
 }
 ]]
 local ampyConfigTemplateEmpty = [[
--- AMPY_PORT=
--- AMPY_BAUD=
--- # Fix for macOS users' "Could not enter raw repl"; try 2.0 and lower from there:
--- AMPY_DELAY=0.5
+AMPY_BAUD=115200
+# AMPY_PORT=
+# Fix for macOS users' "Could not enter raw repl"; try 2.0 and lower from there:
+# AMPY_DELAY=0.5
 ]]
 
 local blinkTemplate = [[
@@ -30,18 +30,14 @@ while True:
 
 local M = {}
 
+-- This is the initialization function for the module.
+-- It sets up the necessary state and resources for the module to function properly.
+-- Call this function before using any other functions in the module.
 function M.init()
-  -- local projectPath = vim.fn.input('Enter project path: ')
-  -- local projectPath = vim.fn.expand(projectPath)
-  -- vim.fn.mkdir(projectPath, 'p')
-  -- vim.fn.chdir(projectPath)
-
   vim.fn.writefile(vim.fn.split(requirementsTemplate, '\n'), 'requirements.txt')
   vim.fn.writefile(vim.fn.split(pyrightConfigTemplate, '\n'), 'pyrightconfig.json')
   vim.fn.writefile(vim.fn.split(blinkTemplate, '\n'), 'main.py')
   vim.fn.writefile(vim.fn.split(ampyConfigTemplateEmpty, '\n'), '.ampy')
-  -- print('Creating ampy config file', _G['AMPY_PORT'], _G['AMPY_BAUD'], _G['AMPY_DELAY'])
-  -- createAmpyConfig()
   vim.notify('Project created', vim.log.levels.INFO)
 end
 

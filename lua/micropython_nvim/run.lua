@@ -2,29 +2,11 @@ local M = {}
 
 local utils = require('micropython_nvim.utils')
 local Terminal = require('toggleterm.terminal').Terminal
-local filepath = vim.api.nvim_buf_get_name(0)
 
--- function M.piobuild()
---   utils.cd_pioini()
---   local command = 'pio run; ' .. utils.extra
---   local term = Terminal:new({ cmd = command, direction = 'float' })
---   term:toggle()
--- end
---
--- function M.pioupload()
---   utils.cd_pioini()
---   local command = 'pio run --target upload; ' .. utils.extra
---   local term = Terminal:new({ cmd = command, direction = 'float' })
---   term:toggle()
--- end
---
--- function M.pioclean()
---   utils.cd_pioini()
---   local command = 'pio run --target clean; ' .. utils.extra
---   local term = Terminal:new({ cmd = command, direction = 'float' })
---   term:toggle()
--- end
-
+--- Runs a MicroPython script on a device using ampy.
+-- The script to run is the current buffer in Neovim.
+-- The port and baud rate are taken from the global variables 'AMPY_PORT' and 'AMPY_BAUD'.
+-- The command is run in a floating terminal.
 function M.mprun()
   -- if not utils.ampy_install_check() then
   --   return
@@ -36,11 +18,13 @@ function M.mprun()
     vim.api.nvim_buf_get_name(0),
     utils.extra
   )
-  print(ampy_assembled_command)
   local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
   term:toggle()
 end
 
+--- Uploads the current buffer in Neovim to a MicroPython device using ampy.
+-- The port and baud rate are taken from the global variables 'AMPY_PORT' and 'AMPY_BAUD'.
+-- The command is run in a floating terminal.
 function M.mp_upload_current()
   -- if not utils.ampy_install_check() then
   --   return
@@ -52,7 +36,6 @@ function M.mp_upload_current()
     vim.api.nvim_buf_get_name(0),
     utils.extra
   )
-  print(ampy_assembled_command)
   local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
   term:toggle()
 end
