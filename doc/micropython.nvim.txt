@@ -47,6 +47,8 @@ REQUIREMENTS                  *micropython.nvim-micropython_nvim-requirements*
 - Neovim >= 0.9 <https://github.com/neovim/neovim/releases/tag/v0.9.0>
 - toggleterm.nvim <https://github.com/akinsho/toggleterm.nvim>
 - dressing.nvim <https://github.com/stevearc/dressing.nvim>(optional)
+- Adafruit ampy <>
+- rshell <>
 
 
 QUICKSTART                      *micropython.nvim-micropython_nvim-quickstart*
