@@ -26,8 +26,8 @@ function MP.set_port()
   setup.set_port()
 end
 
-function MP.set_stubbs()
-  setup.set_stubbs()
+function MP.set_stubs()
+  setup.set_stubs()
 end
 
 function MP.init()
@@ -51,7 +51,7 @@ function MP.initialise()
   vim.api.nvim_create_user_command('MPSetPort', MP.set_port, {})
   vim.api.nvim_create_user_command('MPRepl', MP.repl, {})
   vim.api.nvim_create_user_command('MPInit', MP.init, {})
-  vim.api.nvim_create_user_command('MPSetStubbs', MP.set_stubbs, {})
+  vim.api.nvim_create_user_command('MPSetStubs', MP.set_stubs, {})
 end
 
 return MP

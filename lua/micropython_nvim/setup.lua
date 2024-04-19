@@ -90,7 +90,7 @@ end
 --- This function sets up stubs for the MicroPython environment in Neovim.
 -- Stubs are used to provide autocompletion and linting for MicroPython specific modules and functions.
 -- This function should be called during the setup phase of the plugin.
-function M.set_stubbs()
+function M.set_stubs()
   local options = {
     'stm32',
     'esp32',
