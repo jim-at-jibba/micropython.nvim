@@ -2,14 +2,16 @@
 
 <!-- panvimdoc-ignore-start -->
 
-<img width="1080" alt="image" src="https://github.com/cbochs/grapple.nvim/assets/2467016/1b350ddf-78f2-4457-899b-5b3cdeade01e">
+<img width="1080" alt="image" src="./assets/cmd.png">
 
 Theme: [duskfox](https://github.com/EdenEast/nightfox.nvim)
 
 <details>
 <summary>Showcase</summary>
 
-![micropython-showcase](https://github.com/cbochs/grapple.nvim/assets/2467016/61cca5ae-26af-411f-904f-3eb7735a50c4)
+<img width="1080" alt="image" src="./assets/port.png">
+<img width="1080" alt="image" src="./assets/run.png">
+<img width="1080" alt="image" src="./assets/status.png">
 
 </details>
 
@@ -24,7 +26,7 @@ micropython_nvim is a plugin that aims to make it easier and more enjoyable to w
 - Allows you to run and upload your python files directly to your chosen micro-controller straight from Neovim
 - Allows general file management
 - Allows easy management of port, baudrate, and other settings
-- Allows easy set up of project environment - COMING SOON
+- Allows easy set up of project environment
   - Create a new project, with project specific settings
 - Easy access to the REPL
 
@@ -34,7 +36,7 @@ micropython_nvim is a plugin that aims to make it easier and more enjoyable to w
 - **Upload** local python files to your micro-controller
 - **REPL** access
 - **File management**
-- **Project management** - COMING SOON
+- **Project initialisation**
 
 ## Requirements
 
@@ -48,11 +50,12 @@ micropython_nvim is a plugin that aims to make it easier and more enjoyable to w
 
 - [Install](#installation) micropython_nvim using your preferred package manager
 - Add a keybind to `run` function
-
 ```lua
 -- Lua
 vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
 ```
+
+- Follow the [project setup](#project-setup) steps for a new project
 
 **Next steps**
 
@@ -110,9 +113,8 @@ while True:
     led.value(not led.value())
     print("LED is ON" if led.value() else "LED is OFF")
     sleep(0.5)
-
-  - `.ampy` configuration file
-
+```
+- `.ampy` configuration file
 ```txt
 AMPY_BAUD=115200
 # AMPY_PORT=
@@ -146,15 +148,6 @@ A statusline component can be easily added to show whether a buffer is tagged.
 
 #### Lualine Component
 
-<table>
-<tr>
-<td> Snippet </td>
-<td> Screenshot </td>
-</tr>
-
-<tr>
-<td>
-
 ```lua
 require("lualine").setup({
     sections = {
@@ -167,13 +160,7 @@ require("lualine").setup({
     }
 })
 ```
-
-</td>
-<td><img width="300" alt="image" src="https://github.com/cbochs/grapple.nvim/assets/2467016/d10f4359-9463-4fb8-b131-f7867e4c8fcc"></td>
-</tr>
-</table>
-
-## Manual project setup
+<img width="1080" alt="image" src="./assets/status.png">
 
 
 ## Inspiration and Thanks
