@@ -57,7 +57,7 @@ N.B. If you open an existing project that has an `.ampy` configuration file in t
 vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
 ```
 
-- Follow the [project setup](#project-setup) steps for a new project
+- Follow the [project setup](#project-setup) steps on automatically create the necessary files and directories for a new project.
 
 **Next steps**
 
