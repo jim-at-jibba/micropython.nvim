@@ -110,6 +110,8 @@ function M.set_stubbs()
     newOptions[i] = string.format('micropython-%s-stubs', option)
   end
 
+  table.insert(newOptions, 'samd-seeed_wio_terminal')
+
   vim.ui.select(newOptions, {
     prompt = 'Select stubs for board:',
   }, function(choice)
