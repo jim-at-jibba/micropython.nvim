@@ -1,3 +1,4 @@
+local nvim = vim.api -- alias for Neovim API
 local M = {}
 
 local utils = require('micropython_nvim.utils')
@@ -15,7 +16,7 @@ function M.mprun()
     'ampy -p %s -b %s run %s; %s',
     _G['AMPY_PORT'],
     _G['AMPY_BAUD'],
-    vim.api.nvim_buf_get_name(0),
+    nvim.nvim_buf_get_name(0),
     utils.extra
   )
   local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
@@ -29,15 +30,32 @@ function M.mp_upload_current()
   -- if not utils.ampy_install_check() then
   --   return
   -- end
-  local ampy_assembled_command = string.format(
-    'ampy -p %s -b %s put %s; %s',
-    _G['AMPY_PORT'],
-    _G['AMPY_BAUD'],
-    vim.api.nvim_buf_get_name(0),
-    utils.extra
-  )
-  local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
-  term:toggle()
+
+  -- Get all lines in the buffer
+  local buf = nvim.nvim_get_current_buf()
+  local lines = nvim.nvim_buf_get_lines(buf, 0, -1, false)
+
+  local filePath = '/tmp/main.py'
+
+  local file = io.open(filePath, 'w+')
+  if file then
+    for _, line in ipairs(lines) do
+      file:write(line .. '\n')
+    end
+    file:close()
+    local ampy_assembled_command = string.format(
+      'ampy -p %s -b %s put %s; %s',
+      _G['AMPY_PORT'],
+      _G['AMPY_BAUD'],
+      filePath,
+      utils.extra
+    )
+    local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
+    term:toggle()
+    vim.notify('Upload successful', vim.log.levels.INFO)
+  else
+    vim.notify('Failed to create temp file', vim.log.levels.ERROR)
+  end
 end
 
 return M

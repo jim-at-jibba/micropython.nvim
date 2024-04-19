@@ -1,4 +1,4 @@
-# micropython_nvim
+#  micropython_nvim
 
 <!-- panvimdoc-ignore-start -->
 
