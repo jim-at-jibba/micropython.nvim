@@ -166,6 +166,12 @@ require("lualine").setup({
 <img width="1080" alt="image" src="./assets/status.png">
 
 
+## Not implemented (yet)
+
+- upload all files in a directory
+- delete individual files
+- get files from the device file system
+
 ## Inspiration and Thanks
 
 - [nvim-platformio.lua](https://github.com/anurag3301/nvim-platformio.lua)
