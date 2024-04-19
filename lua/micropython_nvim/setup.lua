@@ -65,7 +65,9 @@ end
 function M.set_port()
   local ports = getPortsList()
 
-  vim.ui.select(ports, {}, function(choice)
+  vim.ui.select(ports, {
+    prompt = 'Select a port:',
+  }, function(choice)
     if not choice then
       print('No selection made')
       return
