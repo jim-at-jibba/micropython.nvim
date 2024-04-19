@@ -58,4 +58,15 @@ function M.mp_upload_current()
   end
 end
 
+function M.erase_all()
+  local ampy_assembled_command = string.format(
+    'ampy -p %s -b %s rmdir -r / 2>&1; %s',
+    _G['AMPY_PORT'],
+    _G['AMPY_BAUD'],
+    utils.extra
+  )
+  local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
+  term:toggle()
+end
+
 return M
