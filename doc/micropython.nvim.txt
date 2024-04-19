@@ -29,7 +29,7 @@ GOALS                                *micropython.nvim-micropython_nvim-goals*
 - Allows you to run and upload your python files directly to your chosen micro-controller straight from Neovim
 - Allows general file management
 - Allows easy management of port, baudrate, and other settings
-- Allows easy set up of project environment - COMING SOON
+- Allows easy set up of project environment
     - Create a new project, with project specific settings
 - Easy access to the REPL
 
@@ -40,7 +40,7 @@ FEATURES                          *micropython.nvim-micropython_nvim-features*
 - **Upload** local python files to your micro-controller
 - **REPL** access
 - **File management**
-- **Project management** - COMING SOON
+- **Project initialisation**
 
 
 REQUIREMENTS                  *micropython.nvim-micropython_nvim-requirements*
@@ -61,6 +61,8 @@ QUICKSTART                      *micropython.nvim-micropython_nvim-quickstart*
     -- Lua
     vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
 <
+
+- Follow the |micropython.nvim-project-setup| steps for a new project
 
 **Next steps**
 
@@ -114,9 +116,9 @@ led = Pin("LED", Pin.OUT)
 while True: led.value(not led.value()) print("LED is ON" if led.value() else
 "LED is OFF") sleep(0.5)
 
-- `.ampy` configuration file
-
->txt
+>
+    - `.ampy` configuration file
+    ```txt
     AMPY_BAUD=115200
     # AMPY_PORT=
     # Fix for macOS users' "Could not enter raw repl"; try 2.0 and lower from there:
