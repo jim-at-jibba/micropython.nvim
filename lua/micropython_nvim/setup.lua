@@ -87,4 +87,44 @@ function M.set_port()
   end)
 end
 
+function M.set_stubbs()
+  local options = {
+    'stm32',
+    'esp32',
+    'esp32-um-tinypico',
+    'esp8266',
+    'rp2',
+    'rp2-pico',
+    'rp2-pico-w',
+    'windows',
+    'unix',
+    'Webassembly',
+  }
+
+  local newOptions = {}
+
+  for i, option in ipairs(options) do
+    newOptions[i] = string.format('micropython-%s-stubs', option)
+  end
+
+  vim.ui.select(newOptions, {
+    prompt = 'Select stubs for board:',
+  }, function(choice)
+    if not choice then
+      print('No selection made')
+      return
+    end
+
+    -- set the baud rate in the global variable
+    -- Remove the line containing AMPY_BAUD from the .ampy file
+    local cw_dir = vim.fn.getcwd()
+    local result = utils.replaceLine(cw_dir .. '/requirements.txt', 'micropython-', choice)
+    if result then
+      vim.notify('MicroPython stubs set to: ' .. choice, vim.log.levels.INFO)
+    else
+      vim.notify('Failed to set micropython stubbs', vim.log.levels.ERROR)
+    end
+  end)
+end
+
 return M
