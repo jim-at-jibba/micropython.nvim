@@ -94,7 +94,7 @@ use {
 - `:MPRun` runs current buffer on the micro-controller
 - `:MPSetPort` sets the port, in both the `.ampy` configuration file and Neovim global variable
 - `:MPSetBaud` sets the baudrate in the `.ampy` configuration file and Neovim global variable
-- `:MPSetStubbs` sets the stubs for the board in `requirments.txt` ready for installation
+- `:MPSetStubs` sets the stubs for the board in `requirments.txt` ready for installation
 - `:MPRepl` opens the REPL
 - `:MPInit` initalizes the project with basic settings and files. See [project setup](#project-setup)
 
@@ -138,7 +138,7 @@ ruff
 }
 ```
 - `:MPSetPort` to set the port
-- `:MPSetStubbs` to set the stubs for the board
+- `:MPSetStubs` to set the stubs for the board
 - `:MPSetBaud` to set the baudrate if not the same as the default `115200`
 - `pip install -r requirments.txt` to install the required packages
 

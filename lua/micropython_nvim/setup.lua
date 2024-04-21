@@ -127,7 +127,7 @@ function M.set_stubs()
     if result then
       vim.notify('MicroPython stubs set to: ' .. choice, vim.log.levels.INFO)
     else
-      vim.notify('Failed to set micropython stubbs', vim.log.levels.ERROR)
+      vim.notify('Failed to set micropython stubs', vim.log.levels.ERROR)
     end
   end)
 end
