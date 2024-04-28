@@ -1,4 +1,4 @@
-*micropython.nvim.txt*        For NVIM v0.8.0       Last change: 2024 April 21
+*micropython.nvim.txt*        For NVIM v0.8.0       Last change: 2024 April 28
 
 ==============================================================================
 Table of Contents                         *micropython.nvim-table-of-contents*
@@ -102,6 +102,8 @@ USAGE                                *micropython.nvim-micropython_nvim-usage*
 - `:MPSetStubs` sets the stubs for the board in `requirments.txt` ready for installation
 - `:MPRepl` opens the REPL
 - `:MPInit` initalizes the project with basic settings and files. See |micropython.nvim-project-setup|
+- `:MPUpload` uploads the current buffer to the micro-controller
+- `:MPDeleteAll` deletes all files from the micro-controller
 
 
 PROJECT SETUP                *micropython.nvim-micropython_nvim-project-setup*
