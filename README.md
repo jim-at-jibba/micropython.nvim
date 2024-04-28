@@ -97,6 +97,8 @@ use {
 - `:MPSetStubs` sets the stubs for the board in `requirments.txt` ready for installation
 - `:MPRepl` opens the REPL
 - `:MPInit` initalizes the project with basic settings and files. See [project setup](#project-setup)
+- `:MPUpload` uploads the current buffer to the micro-controller
+- `:MPDeleteAll` deletes all files from the micro-controller
 
 ## Project Setup
 
