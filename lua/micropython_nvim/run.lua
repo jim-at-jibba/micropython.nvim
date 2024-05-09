@@ -23,6 +23,18 @@ function M.mprun()
   term:toggle()
 end
 
+local function mp_upload_one(file_path)
+  local ampy_assembled_command = string.format(
+    'ampy -p %s -b %s put %s; %s',
+    _G['AMPY_PORT'],
+    _G['AMPY_BAUD'],
+    file_path,
+    utils.extra
+  )
+  local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
+  term:toggle()
+end
+
 --- Uploads the current buffer in Neovim to a MicroPython device using ampy.
 -- The port and baud rate are taken from the global variables 'AMPY_PORT' and 'AMPY_BAUD'.
 -- The command is run in a floating terminal.
@@ -43,18 +55,53 @@ function M.mp_upload_current()
       file:write(line .. '\n')
     end
     file:close()
-    local ampy_assembled_command = string.format(
-      'ampy -p %s -b %s put %s; %s',
-      _G['AMPY_PORT'],
-      _G['AMPY_BAUD'],
-      filePath,
-      utils.extra
-    )
-    local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
-    term:toggle()
+    mp_upload_one(filePath)
     vim.notify('Upload successful', vim.log.levels.INFO)
   else
     vim.notify('Failed to create temp file', vim.log.levels.ERROR)
+  end
+end
+
+--- This function uploads all files in the current directory to a MicroPython board.
+function M.mp_upload_all()
+  -- if not utils.ampy_install_check() then
+  --   return
+  -- endlocal directory_contents = io.popen("ls " .. project_dir)
+  local directory = vim.fn.getcwd()
+  -- perform_action_on_files(cw_dir)
+  local ignore_list = {
+    ['.git'] = true,
+    ['requirements.txt'] = true,
+    ['.ampy'] = true,
+  }
+
+  local handle = vim.loop.fs_scandir(directory)
+
+  if handle == nil then
+    print('Cannot open ' .. directory)
+    return
+  end
+
+  while true do
+    local name, type = vim.loop.fs_scandir_next(handle)
+    if name == nil then
+      break
+    end
+
+    -- Check if the name is in the ignore list
+    if ignore_list[name] then
+      print('Ignoring: ' .. name)
+    else
+      local path = directory .. '/' .. name
+
+      if type == 'directory' then
+        perform_action_on_files(path)
+      else
+        -- perform action on file
+        print('Performing action on: ' .. path)
+        mp_upload_one(path)
+      end
+    end
   end
 end
 
