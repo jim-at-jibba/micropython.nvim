@@ -23,6 +23,8 @@ micropython_nvim is a plugin that aims to make it easier and more enjoyable to w
 
 N.B. If you open an existing project that has an `.ampy` configuration file in the root directory, the plugin will automatically configure the port and baud rate for you.
 
+**IMPORTANT** This plugin assumes you are opening Neovim at the root of the project. Some commands will not behave in the expected way if you choose not to do this.
+
 ## Goals
 
 - Allows you to run and upload your python files directly to your chosen micro-controller straight from Neovim
@@ -99,6 +101,25 @@ use {
 - `:MPInit` initalizes the project with basic settings and files. See [project setup](#project-setup)
 - `:MPUpload` uploads the current buffer to the micro-controller
 - `:MPDeleteAll` deletes all files from the micro-controller
+- `:MPUploadAll` uploads all files in the project. This command also accepts file or folder names to ignore i.e `:MPUploadAll test.py unused/lib.py` and auto ignores the following files
+
+```lua
+  local ignore_list = {
+    ['.git'] = true,
+    ['requirements.txt'] = true,
+    ['.ampy'] = true,
+    ['.vscode'] = true,
+    ['.gitignore'] = true,
+    ['project.pymakr'] = true,
+    ['env'] = true,
+    ['venv'] = true,
+    ['__pycache__'] = true,
+    ['.python-version'] = true,
+    ['.micropy/'] = true,
+    ['micropy.json'] = true,
+  }
+
+```
 
 ## Project Setup
 
@@ -170,9 +191,9 @@ require("lualine").setup({
 
 ## Not implemented (yet)
 
-- upload all files in a directory
-- delete individual files
-- get files from the device file system
+- [x] upload all files in a directory
+- [ ] delete individual files
+- [ ] get files from the device file system
 
 ## Inspiration and Thanks
 
