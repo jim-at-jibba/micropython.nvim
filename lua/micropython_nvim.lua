@@ -18,8 +18,8 @@ function MP.upload_current()
   run.mp_upload_current()
 end
 
-function MP.upload_all()
-  run.mp_upload_all()
+function MP.upload_all(opt)
+  run.mp_upload_all(opt)
 end
 
 function MP.set_baud_rate()
@@ -55,7 +55,9 @@ function MP.initialise()
   utils.readAmpyConfig()
   vim.api.nvim_create_user_command('MPRun', MP.run, {})
   vim.api.nvim_create_user_command('MPUpload', MP.upload_current, {})
-  vim.api.nvim_create_user_command('MPUploadAll', MP.upload_all, {})
+  vim.api.nvim_create_user_command('MPUploadAll', function(opt)
+    MP.upload_all(opt)
+  end, { nargs = '?' })
   vim.api.nvim_create_user_command('MPSetBaud', MP.set_baud_rate, {})
   vim.api.nvim_create_user_command('MPSetPort', MP.set_port, {})
   vim.api.nvim_create_user_command('MPRepl', MP.repl, {})
