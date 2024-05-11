@@ -55,9 +55,7 @@ local function create_upload_all_commands_table(directory, ignore_list)
       break
     end
 
-    if ignore_list[name] then
-      print('Ignoring: ' .. name)
-    else
+    if not ignore_list[name] then
       local path = directory .. '/' .. name
 
       if type == 'directory' then
@@ -65,29 +63,31 @@ local function create_upload_all_commands_table(directory, ignore_list)
       else
         table.insert(commands, assemble_command(path))
       end
+    else
+      utils.debugPrint(string.format('Ignoring: %s', name))
     end
   end
 
   return commands
 end
 
-local function upload_job(command)
+local function async_job(command, command_name)
   local job_id = vim.fn.jobstart(command, {
     on_exit = function(j, exit_status, _)
       if exit_status == 0 then
-        vim.notify('Command job completed successfully', vim.log.levels.INFO)
+        vim.notify(command_name .. ' completed successfully', vim.log.levels.INFO)
       else
-        print('Job failed with exit status: ' .. exit_status)
+        utils.debugPrint('Job failed with exit status: ' .. exit_status)
       end
     end,
   })
 
   if job_id == 0 then
-    vim.notify('Failed to run command job', vim.log.levels.ERROR)
+    vim.notify('Failed to run command job: ' .. command_name, vim.log.levels.ERROR)
   elseif job_id == -1 then
     vim.notify('Command not executable', vim.log.levels.ERROR)
   else
-    vim.notify('Command job started', vim.log.levels.INFO)
+    vim.notify(command_name .. ' started', vim.log.levels.INFO)
   end
 end
 
@@ -95,11 +95,6 @@ end
 -- The port and baud rate are taken from the global variables 'AMPY_PORT' and 'AMPY_BAUD'.
 -- The command is run in a floating terminal.
 function M.mp_upload_current()
-  -- if not utils.ampy_install_check() then
-  --   return
-  -- end
-
-  -- Get all lines in the buffer
   local buf = nvim.nvim_get_current_buf()
   local lines = nvim.nvim_buf_get_lines(buf, 0, -1, false)
 
@@ -111,8 +106,7 @@ function M.mp_upload_current()
       file:write(line .. '\n')
     end
     file:close()
-    upload_job(assemble_command(filePath))
-    vim.notify('Upload successful', vim.log.levels.INFO)
+    async_job(assemble_command(filePath), 'Upload current')
   else
     vim.notify('Failed to create temp file', vim.log.levels.ERROR)
   end
@@ -146,7 +140,7 @@ function M.mp_upload_all(opt)
   local commands = create_upload_all_commands_table(directory, ignore_list)
 
   local long_command = table.concat(commands, '; ')
-  upload_job(long_command)
+  async_job(long_command, 'Upload all')
 end
 
 function M.erase_all()
