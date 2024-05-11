@@ -1,4 +1,4 @@
-*micropython.nvim.txt*        For NVIM v0.8.0       Last change: 2024 April 28
+*micropython.nvim.txt*         For NVIM v0.8.0        Last change: 2024 May 11
 
 ==============================================================================
 Table of Contents                         *micropython.nvim-table-of-contents*
@@ -26,6 +26,10 @@ section to get started.
 N.B. If you open an existing project that has an `.ampy` configuration file in
 the root directory, the plugin will automatically configure the port and baud
 rate for you.
+
+**IMPORTANT** This plugin assumes you are opening Neovim at the root of the
+project. Some commands will not behave in the expected way if you choose not to
+do this.
 
 
 GOALS                                *micropython.nvim-micropython_nvim-goals*
@@ -104,6 +108,24 @@ USAGE                                *micropython.nvim-micropython_nvim-usage*
 - `:MPInit` initalizes the project with basic settings and files. See |micropython.nvim-project-setup|
 - `:MPUpload` uploads the current buffer to the micro-controller
 - `:MPDeleteAll` deletes all files from the micro-controller
+- `:MPUploadAll` uploads all files in the project. This command also accepts file or folder names to ignore i.e `:MPUploadAll test.py unused/lib.py` and auto ignores the following files
+
+>lua
+      local ignore_list = {
+        ['.git'] = true,
+        ['requirements.txt'] = true,
+        ['.ampy'] = true,
+        ['.vscode'] = true,
+        ['.gitignore'] = true,
+        ['project.pymakr'] = true,
+        ['env'] = true,
+        ['venv'] = true,
+        ['__pycache__'] = true,
+        ['.python-version'] = true,
+        ['.micropy/'] = true,
+        ['micropy.json'] = true,
+      }
+<
 
 
 PROJECT SETUP                *micropython.nvim-micropython_nvim-project-setup*
