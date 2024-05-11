@@ -35,16 +35,18 @@ local function upload_one(file_path)
   term:toggle()
 end
 
-local function upload_all(directory, ignore_list)
-  -- if not utils.ampy_install_check() then
-  --   return
-  -- endlocal directory_contents = io.popen("ls " .. project_dir)
+local function assemble_command(path)
+  return string.format('ampy -p %s -b %s put %s', _G['AMPY_PORT'], _G['AMPY_BAUD'], path)
+end
+
+local function create_upload_all_commands_table(directory, ignore_list)
+  local commands = {}
 
   local handle = vim.loop.fs_scandir(directory)
 
   if handle == nil then
     print('Cannot open ' .. directory)
-    return
+    return commands
   end
 
   while true do
@@ -59,12 +61,33 @@ local function upload_all(directory, ignore_list)
       local path = directory .. '/' .. name
 
       if type == 'directory' then
-        upload_all(path, ignore_list)
+        table.insert(commands, assemble_command(path))
       else
-        print('uploadinging...', path)
-        upload_one(path)
+        table.insert(commands, assemble_command(path))
       end
     end
+  end
+
+  return commands
+end
+
+local function upload_job(command)
+  local job_id = vim.fn.jobstart(command, {
+    on_exit = function(j, exit_status, _)
+      if exit_status == 0 then
+        vim.notify('Command job completed successfully', vim.log.levels.INFO)
+      else
+        print('Job failed with exit status: ' .. exit_status)
+      end
+    end,
+  })
+
+  if job_id == 0 then
+    vim.notify('Failed to run command job', vim.log.levels.ERROR)
+  elseif job_id == -1 then
+    vim.notify('Command not executable', vim.log.levels.ERROR)
+  else
+    vim.notify('Command job started', vim.log.levels.INFO)
   end
 end
 
@@ -88,7 +111,7 @@ function M.mp_upload_current()
       file:write(line .. '\n')
     end
     file:close()
-    upload_one(filePath)
+    upload_job(assemble_command(filePath))
     vim.notify('Upload successful', vim.log.levels.INFO)
   else
     vim.notify('Failed to create temp file', vim.log.levels.ERROR)
@@ -119,10 +142,11 @@ function M.mp_upload_all(opt)
   end
   local directory = vim.fn.getcwd()
 
-  for k, v in pairs(ignore_list) do
-    print('Ignore', k, v)
-  end
-  upload_all(directory, ignore_list)
+  -- this needs to return a list of commands, if a directory is found command should be to upload whole directory
+  local commands = create_upload_all_commands_table(directory, ignore_list)
+
+  local long_command = table.concat(commands, '; ')
+  upload_job(long_command)
 end
 
 function M.erase_all()
