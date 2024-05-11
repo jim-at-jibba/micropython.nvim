@@ -66,7 +66,7 @@ function MP.initialise()
   vim.api.nvim_create_user_command('MPRepl', MP.repl, {})
   vim.api.nvim_create_user_command('MPInit', MP.init, {})
   vim.api.nvim_create_user_command('MPSetStubs', MP.set_stubs, {})
-  vim.api.nvim_create_user_command('MPEraseAll', MP.erase_all, {})
+  -- vim.api.nvim_create_user_command('MPEraseAll', MP.erase_all, {})
   vim.api.nvim_create_user_command('MPEraseOne', MP.erase_one, {})
 end
 

@@ -100,7 +100,7 @@ use {
 - `:MPRepl` opens the REPL
 - `:MPInit` initalizes the project with basic settings and files. See [project setup](#project-setup)
 - `:MPUpload` uploads the current buffer to the micro-controller
-- `:MPDeleteAll` deletes all files from the micro-controller
+- `:MPEraseOne` deletes single file or folder from device.
 - `:MPUploadAll` uploads all files in the project. This command also accepts file or folder names to ignore i.e `:MPUploadAll test.py unused` and auto ignores the following files. Currently, you can not ignore files that are not in the root directory.
 
 ```lua
@@ -192,7 +192,8 @@ require("lualine").setup({
 ## Not implemented (yet)
 
 - [x] upload all files in a directory
-- [ ] delete individual files
+- [x] delete individual files
+- [ ] delete all files
 - [ ] get files from the device file system
 
 ## Inspiration and Thanks
