@@ -85,9 +85,7 @@ end
 -- @param replacement The string to replace the found line with.
 -- @usage replaceLine('/path/to/file', 'search string', 'replacement string')
 function M.replaceLine(file, needle, replacement)
-  if debug then
-    print('Replacing line in file:', file, needle, replacement)
-  end
+  M.debugPrint(string.format('Replacing line in file: %s %s %s', file, needle, replacement))
   local temp_file = io.open(file .. '_temp', 'w')
   if not temp_file then
     vim.notify('Failed to open temporary file for writing', vim.log.levels.ERROR)
@@ -104,6 +102,12 @@ function M.replaceLine(file, needle, replacement)
   temp_file:close()
   os.rename(file .. '_temp', file)
   return true
+end
+
+function M.debugPrint(message)
+  if debug then
+    print(message)
+  end
 end
 
 return M
