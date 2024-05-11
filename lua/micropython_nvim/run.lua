@@ -23,20 +23,8 @@ function M.mprun()
   term:toggle()
 end
 
-local function upload_one(file_path)
-  local ampy_assembled_command = string.format(
-    'ampy -p %s -b %s put %s; %s',
-    _G['AMPY_PORT'],
-    _G['AMPY_BAUD'],
-    file_path,
-    utils.extra
-  )
-  local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
-  term:toggle()
-end
-
-local function assemble_command(path)
-  return string.format('ampy -p %s -b %s put %s', _G['AMPY_PORT'], _G['AMPY_BAUD'], path)
+local function assemble_command(path, type)
+  return string.format('ampy -p %s -b %s %s %s', _G['AMPY_PORT'], _G['AMPY_BAUD'], type, path)
 end
 
 local function create_upload_all_commands_table(directory, ignore_list)
@@ -59,9 +47,41 @@ local function create_upload_all_commands_table(directory, ignore_list)
       local path = directory .. '/' .. name
 
       if type == 'directory' then
-        table.insert(commands, assemble_command(path))
+        table.insert(commands, assemble_command(path, 'put'))
       else
-        table.insert(commands, assemble_command(path))
+        table.insert(commands, assemble_command(path, 'put'))
+      end
+    else
+      utils.debugPrint(string.format('Ignoring: %s', name))
+    end
+  end
+
+  return commands
+end
+
+local function create_delete_all_commands_table(directory, ignore_list)
+  local commands = {}
+
+  local handle = vim.loop.fs_scandir(directory)
+
+  if handle == nil then
+    print('Cannot open ' .. directory)
+    return commands
+  end
+
+  while true do
+    local name, type = vim.loop.fs_scandir_next(handle)
+    if name == nil then
+      break
+    end
+
+    if not ignore_list[name] then
+      local path = directory .. '/' .. name
+
+      if type == 'directory' then
+        table.insert(commands, assemble_command(path, 'put'))
+      else
+        table.insert(commands, assemble_command(path, 'put'))
       end
     else
       utils.debugPrint(string.format('Ignoring: %s', name))
@@ -106,7 +126,7 @@ function M.mp_upload_current()
       file:write(line .. '\n')
     end
     file:close()
-    async_job(assemble_command(filePath), 'Upload current')
+    async_job(assemble_command(filePath, 'put'), 'Upload current')
   else
     vim.notify('Failed to create temp file', vim.log.levels.ERROR)
   end
@@ -152,6 +172,47 @@ function M.erase_all()
   )
   local term = Terminal:new({ cmd = ampy_assembled_command, direction = 'float' })
   term:toggle()
+end
+
+local function getFilesList()
+  local files = {}
+  local pfile
+
+  local command = string.format('ampy -p %s -b %s ls', _G['AMPY_PORT'], _G['AMPY_BAUD'])
+  pfile = io.popen(command)
+
+  if pfile then
+    for filename in pfile:lines() do
+      table.insert(files, filename)
+    end
+
+    -- Close the file handle
+    pfile:close()
+  end
+
+  return files
+end
+
+function M.erase_one()
+  local files = getFilesList()
+
+  vim.ui.select(files, {
+    prompt = 'Select a file on device to delete:',
+  }, function(choice)
+    if not choice then
+      print('No selection made')
+      return
+    end
+
+    local extension = string.match(choice, '%.([^%.]+)$')
+    if extension then
+      local command = assemble_command(choice, 'rm')
+      async_job(command, 'Delete file')
+    else
+      local command = assemble_command(choice, 'rmdir')
+      async_job(command, 'Delete folder')
+    end
+  end)
 end
 
 return M

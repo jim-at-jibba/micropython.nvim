@@ -34,6 +34,9 @@ function MP.erase_all()
   run.erase_all()
 end
 
+function MP.erase_one()
+  run.erase_one()
+end
 function MP.set_stubs()
   setup.set_stubs()
 end
@@ -64,6 +67,7 @@ function MP.initialise()
   vim.api.nvim_create_user_command('MPInit', MP.init, {})
   vim.api.nvim_create_user_command('MPSetStubs', MP.set_stubs, {})
   vim.api.nvim_create_user_command('MPEraseAll', MP.erase_all, {})
+  vim.api.nvim_create_user_command('MPEraseOne', MP.erase_one, {})
 end
 
 return MP
