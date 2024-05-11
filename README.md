@@ -101,7 +101,7 @@ use {
 - `:MPInit` initalizes the project with basic settings and files. See [project setup](#project-setup)
 - `:MPUpload` uploads the current buffer to the micro-controller
 - `:MPDeleteAll` deletes all files from the micro-controller
-- `:MPUploadAll` uploads all files in the project. This command also accepts file or folder names to ignore i.e `:MPUploadAll test.py unused/lib.py` and auto ignores the following files
+- `:MPUploadAll` uploads all files in the project. This command also accepts file or folder names to ignore i.e `:MPUploadAll test.py unused` and auto ignores the following files. Currently, you can not ignore files that are not in the root directory.
 
 ```lua
   local ignore_list = {
