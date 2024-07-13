@@ -44,7 +44,7 @@ local function getPortsList()
   local pfile
 
   -- For Unix/Linux/MacOS:
-  local command = 'ls /dev/tty*'
+  local command = 'ls /dev/ttyUSB*'
 
   -- Open the command for reading
   pfile = io.popen(command)

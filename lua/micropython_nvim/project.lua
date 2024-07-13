@@ -11,7 +11,7 @@ local pyrightConfigTemplate = [[
 ]]
 local ampyConfigTemplateEmpty = [[
 AMPY_BAUD=115200
-# AMPY_PORT=
+AMPY_PORT=/dev/ttyUSB0
 # Fix for macOS users' "Could not enter raw repl"; try 2.0 and lower from there:
 # AMPY_DELAY=0.5
 ]]
