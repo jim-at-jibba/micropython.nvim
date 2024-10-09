@@ -118,7 +118,7 @@ function M.mp_upload_current()
   local buf = nvim.nvim_get_current_buf()
   local lines = nvim.nvim_buf_get_lines(buf, 0, -1, false)
 
-  local filePath = '/tmp/main.py'
+  local filePath = '/tmp/' .. vim.fs.basename(nvim.nvim_buf_get_name(0))
 
   local file = io.open(filePath, 'w+')
   if file then
@@ -128,7 +128,7 @@ function M.mp_upload_current()
     file:close()
     async_job(assemble_command(filePath, 'put'), 'Upload current')
   else
-    vim.notify('Failed to create temp file', vim.log.levels.ERROR)
+    vim.notify('Failed to create temp file ' .. filePath, vim.log.levels.ERROR)
   end
 end
 
