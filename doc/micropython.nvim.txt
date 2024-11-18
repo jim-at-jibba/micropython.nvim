@@ -1,4 +1,4 @@
-*micropython.nvim.txt*       For NVIM v0.8.0      Last change: 2024 October 09
+*micropython.nvim.txt*      For NVIM v0.8.0      Last change: 2024 November 18
 
 ==============================================================================
 Table of Contents                         *micropython.nvim-table-of-contents*
