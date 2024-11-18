@@ -1,4 +1,4 @@
-local debug = false
+local debug = true
 local M = {}
 
 M.extra = 'printf "\\\\n\\\\033[0;33mPlease Press ENTER to continue \\\\033[0m"; read'
