@@ -41,23 +41,25 @@ end
 -- @return A table containing the names of the available ports.
 local function getPortsList()
   local ports = {}
-  local pfile
+  -- Device patterns to check
+  local patterns = {
+    '/dev/ttyUSB*', -- USB-to-Serial adapters
+    '/dev/ttyACM*', -- Arduino and similar CDC devices
+    '/dev/ttyS*', -- Hardware serial ports
+    '/dev/tty.usbmodem*',
+  }
 
-  -- For Unix/Linux/MacOS:
-  local command = 'ls /dev/ttyUSB*'
-
-  -- Open the command for reading
-  pfile = io.popen(command)
-
-  if pfile then
-    for filename in pfile:lines() do
-      table.insert(ports, filename)
+  for _, pattern in ipairs(patterns) do
+    local pfile = io.popen('ls ' .. pattern .. ' 2>/dev/null')
+    if pfile then
+      for filename in pfile:lines() do
+        table.insert(ports, filename)
+      end
+      pfile:close()
     end
-
-    -- Close the file handle
-    pfile:close()
   end
 
+  vim.notify('🪚 ports: ' .. tostring(ports))
   return ports
 end
 
