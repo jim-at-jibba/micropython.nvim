@@ -1,4 +1,4 @@
-local debug = true
+local debug = false
 local M = {}
 
 M.extra = 'printf "\\\\n\\\\033[0;33mPlease Press ENTER to continue \\\\033[0m"; read'
@@ -28,7 +28,6 @@ function M.readAmpyConfig()
 
   if handle ~= nil then
     local result = handle:read('*a')
-    print(type(result))
     if result == '' then
       if debug then
         vim.notify('No .ampy file found in the current directory', vim.log.levels.ERROR)
