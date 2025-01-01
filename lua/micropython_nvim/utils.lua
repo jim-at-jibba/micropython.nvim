@@ -24,16 +24,17 @@ end
 -- The .ampy file should contain lines in the format 'KEY=VALUE'.
 function M.readAmpyConfig()
   local cw_dir = vim.fn.getcwd()
-  local handle = io.popen('cat ' .. cw_dir .. '/.ampy')
+  local ampy_path = cw_dir .. '/.ampy'
+  if vim.fn.filereadable(ampy_path) == 0 then
+    if debug then
+      vim.notify('No .ampy file found in the current directory', vim.log.levels.ERROR)
+    end
+    return
+  end
+  local handle = io.open(ampy_path, 'r')
 
   if handle ~= nil then
     local result = handle:read('*a')
-    if result == '' then
-      if debug then
-        vim.notify('No .ampy file found in the current directory', vim.log.levels.ERROR)
-      end
-      return
-    end
 
     local lines = {}
     for s in result:gmatch('[^\r\n]+') do
