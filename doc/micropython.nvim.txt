@@ -63,9 +63,14 @@ REQUIREMENTS                  *micropython.nvim-micropython_nvim-requirements*
 - toggleterm.nvim <https://github.com/akinsho/toggleterm.nvim>
 - dressing.nvim <https://github.com/stevearc/dressing.nvim> (optional)
 - mpremote <https://docs.micropython.org/en/latest/reference/mpremote.html>
+- uv <https://docs.astral.sh/uv/> (for dependency management, Unix-only)
 
-Install mpremote: >bash
-    pip install mpremote
+Install uv (Unix/macOS): >bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+<
+
+Install mpremote (will be installed automatically by `uv sync`): >bash
+    uv tool install mpremote
 <
 
 
@@ -132,7 +137,8 @@ File Management ~
 
 Setup Commands ~
 
-- `:MPInit` - Initialize MicroPython project
+- `:MPInit` - Initialize MicroPython project (creates pyproject.toml, selects board)
+- `:MPInstall` - Install project dependencies with uv
 - `:MPSetPort` - Set the device port
 - `:MPSetBaud` - Set the baud rate (optional, mpremote auto-detects)
 - `:MPSetStubs` - Set MicroPython stubs for your board
@@ -145,10 +151,10 @@ Upload Ignore List ~
 
 Default ignore list: >lua
     {
-      '.git', 'requirements.txt', '.ampy', '.micropython', '.vscode',
-      '.gitignore', 'project.pymakr', 'env', 'venv', '__pycache__',
+      '.git', 'pyproject.toml', 'uv.lock', '.ampy', '.micropython', '.vscode',
+      '.gitignore', 'project.pymakr', 'env', 'venv', '.venv', '__pycache__',
       '.python-version', '.micropy/', 'micropy.json', '.idea',
-      'README.md', 'LICENSE'
+      'README.md', 'LICENSE', 'requirements.txt'
     }
 <
 
@@ -158,15 +164,25 @@ PROJECT SETUP                *micropython.nvim-micropython_nvim-project-setup*
 Steps to initialize a project:
 
 1. Create a new directory for your project
-2. (Optional) Create a virtual environment
-3. Run `:MPInit` in the project directory. This creates:
-   - `main.py` - starter blink program
-   - `.micropython` - configuration file
-   - `requirements.txt` - Python dependencies
-   - `pyrightconfig.json` - LSP configuration
-4. `:MPSetPort` to set the port (or use `auto` for auto-detection)
-5. `:MPSetStubs` to set the stubs for your board
-6. `pip install -r requirements.txt` to install the required packages
+2. Open Neovim in the project directory
+3. Run `:MPInit` - this will:
+   - Prompt you to select your target board (RP2, ESP32, etc.)
+   - Create `pyproject.toml` with dependencies and stubs
+   - Create `main.py` - starter blink program
+   - Create `.micropython` - device configuration
+   - Create `pyrightconfig.json` - LSP configuration
+   - Create `.gitignore`
+   - Optionally run `uv sync` to install dependencies
+4. If you skipped the install prompt, run `:MPInstall` to install dependencies
+5. `:MPSetPort` to set the port (or use `auto` for auto-detection)
+
+Supported Boards ~
+
+- Raspberry Pi Pico (RP2) - `micropython-rp2-stubs`
+- ESP32 - `micropython-esp32-stubs`
+- ESP8266 - `micropython-esp8266-stubs`
+- STM32 / Pyboard - `micropython-stm32-stubs`
+- SAMD (Wio Terminal) - `micropython-samd-stubs`
 
 Configuration File ~
 

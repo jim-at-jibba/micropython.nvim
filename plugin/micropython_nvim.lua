@@ -26,6 +26,10 @@ vim.api.nvim_create_user_command('MPInit', function()
   require('micropython_nvim').init()
 end, { desc = 'Initialize MicroPython project' })
 
+vim.api.nvim_create_user_command('MPInstall', function()
+  require('micropython_nvim').install()
+end, { desc = 'Install project dependencies with uv' })
+
 vim.api.nvim_create_user_command('MPSetStubs', function()
   require('micropython_nvim').set_stubs()
 end, { desc = 'Set MicroPython stubs for board' })

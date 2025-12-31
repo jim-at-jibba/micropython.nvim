@@ -47,6 +47,10 @@ function M.init()
   require('micropython_nvim.project').init()
 end
 
+function M.install()
+  require('micropython_nvim.project').install()
+end
+
 function M.sync()
   require('micropython_nvim.run').sync()
 end

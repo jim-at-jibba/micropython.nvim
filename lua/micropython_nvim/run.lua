@@ -7,6 +7,8 @@ local M = {}
 ---@type table<string, boolean>
 M.DEFAULT_IGNORE_LIST = {
   ['.git'] = true,
+  ['pyproject.toml'] = true,
+  ['uv.lock'] = true,
   ['requirements.txt'] = true,
   ['.ampy'] = true,
   ['.micropython'] = true,
@@ -15,6 +17,7 @@ M.DEFAULT_IGNORE_LIST = {
   ['project.pymakr'] = true,
   ['env'] = true,
   ['venv'] = true,
+  ['.venv'] = true,
   ['__pycache__'] = true,
   ['.python-version'] = true,
   ['.micropy/'] = true,

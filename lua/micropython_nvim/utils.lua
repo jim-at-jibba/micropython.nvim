@@ -229,4 +229,28 @@ function M.get_mpremote_base()
   return 'mpremote '
 end
 
+---@return boolean
+function M.uv_available()
+  return vim.fn.executable('uv') == 1
+end
+
+---@return boolean
+function M.pyproject_exists()
+  return vim.fn.filereadable(M.get_cwd() .. '/pyproject.toml') == 1
+end
+
+---@return boolean
+function M.requirements_exists()
+  return vim.fn.filereadable(M.get_cwd() .. '/requirements.txt') == 1
+end
+
+---@return string
+function M.get_directory_name()
+  local cwd = M.get_cwd()
+  local name = vim.fn.fnamemodify(cwd, ':t')
+  -- Sanitize for Python package name: replace invalid chars, handle leading digits
+  name = name:gsub('[^%w_]', '_'):gsub('^(%d)', '_%1'):lower()
+  return name
+end
+
 return M
