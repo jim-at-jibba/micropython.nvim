@@ -19,53 +19,54 @@ Theme: [duskfox](https://github.com/EdenEast/nightfox.nvim)
 
 ## Introduction
 
-micropython_nvim is a plugin that aims to make it easier and more enjoyable to work on micropython projects in Neovim. See the [quickstart](#quickstart) section to get started.
+micropython_nvim is a plugin that aims to make it easier and more enjoyable to work on MicroPython projects in Neovim. It uses [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html), the official MicroPython remote control tool.
 
-N.B. If you open an existing project that has an `.ampy` configuration file in the root directory, the plugin will automatically configure the port and baud rate for you.
+See the [quickstart](#quickstart) section to get started.
+
+N.B. If you open an existing project that has a `.micropython` configuration file in the root directory, the plugin will automatically configure the port and baud rate for you.
 
 **IMPORTANT** This plugin assumes you are opening Neovim at the root of the project. Some commands will not behave in the expected way if you choose not to do this.
 
 ## Goals
 
-- Allows you to run and upload your python files directly to your chosen micro-controller straight from Neovim
-- Allows general file management
-- Allows easy management of port, baudrate, and other settings
-- Allows easy set up of project environment
-  - Create a new project, with project specific settings
-- Easy access to the REPL
+- Run and upload python files directly to your micro-controller from Neovim
+- Easy multi-file project support with recursive directory upload
+- Live development with filesystem mounting
+- General file management on device
+- Easy management of port, baudrate, and other settings
+- Easy project environment setup
+- Built-in REPL access
 
 ## Features
 
 - **Run** local python files on your micro-controller
-- **Upload** local python files to your micro-controller
-- **REPL** access
-- **File management**
-- **Project initialisation**
+- **Upload** local python files to your micro-controller (including recursive directory upload)
+- **Sync** mount local directory for live development without uploading
+- **REPL** access via mpremote
+- **File management** - list, delete files on device
+- **Device management** - list connected devices, reset
+- **Project initialization**
 
 ## Requirements
 
 - [Neovim >= 0.9](https://github.com/neovim/neovim/releases/tag/v0.9.0)
 - [toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)
-- [dressing.nvim](https://github.com/stevearc/dressing.nvim)(optional)
-- [Adafruit ampy]()
-- [rshell]()
-
-## Quickstart
-
-- [Install](#installation) micropython_nvim using your preferred package manager
-- Add a keybind to `run` function
-```lua
--- Lua
-vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
-```
-
-- Follow the [project setup](#project-setup) steps on automatically create the necessary files and directories for a new project.
-
-**Next steps**
-
-- Add a [statusline component](#statusline)
+- [dressing.nvim](https://github.com/stevearc/dressing.nvim) (optional)
+- [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html)
 
 ## Installation
+
+### Prerequisites
+
+Install mpremote:
+
+```bash
+pip install mpremote
+# or
+pipx install mpremote
+```
+
+### Plugin Installation
 
 <details>
 <summary>lazy.nvim</summary>
@@ -91,88 +92,134 @@ use {
 
 </details>
 
-## Usage
+## Quickstart
 
-- `:MPRun` runs current buffer on the micro-controller
-- `:MPSetPort` sets the port, in both the `.ampy` configuration file and Neovim global variable
-- `:MPSetBaud` sets the baudrate in the `.ampy` configuration file and Neovim global variable
-- `:MPSetStubs` sets the stubs for the board in `requirments.txt` ready for installation
-- `:MPRepl` opens the REPL
-- `:MPInit` initalizes the project with basic settings and files. See [project setup](#project-setup)
-- `:MPUpload` uploads the current buffer to the micro-controller
-- `:MPEraseOne` deletes single file or folder from device.
-- `:MPUploadAll` uploads all files in the project. This command also accepts file or folder names to ignore i.e `:MPUploadAll test.py unused` and auto ignores the following files. Currently, you can not ignore files that are not in the root directory.
+1. [Install](#installation) micropython_nvim using your preferred package manager
+2. Add a keybind to `run` function:
 
 ```lua
-  local ignore_list = {
-    ['.git'] = true,
-    ['requirements.txt'] = true,
-    ['.ampy'] = true,
-    ['.vscode'] = true,
-    ['.gitignore'] = true,
-    ['project.pymakr'] = true,
-    ['env'] = true,
-    ['venv'] = true,
-    ['__pycache__'] = true,
-    ['.python-version'] = true,
-    ['.micropy/'] = true,
-    ['micropy.json'] = true,
-  }
+vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
+```
 
+3. Follow the [project setup](#project-setup) steps to create the necessary files for a new project.
+
+**Next steps**
+
+- Add a [statusline component](#statusline)
+- See the [examples](./examples/) directory for multi-file project examples
+
+## Usage
+
+### Core Commands
+
+| Command | Description |
+|---------|-------------|
+| `:MPRun` | Run current buffer on the micro-controller |
+| `:MPRunMain` | Run main.py on the device |
+| `:MPUpload` | Upload current buffer to the micro-controller |
+| `:MPUploadAll` | Upload all project files (recursive) |
+| `:MPRepl` | Open MicroPython REPL |
+
+### Development Commands
+
+| Command | Description |
+|---------|-------------|
+| `:MPSync` | Mount local directory on device for live development |
+| `:MPReset` | Soft reset the device |
+| `:MPHardReset` | Hard reset the device |
+
+### File Management
+
+| Command | Description |
+|---------|-------------|
+| `:MPListFiles` | List files on device |
+| `:MPEraseOne` | Delete single file or folder from device |
+| `:MPEraseAll` | Delete all files from device |
+
+### Setup Commands
+
+| Command | Description |
+|---------|-------------|
+| `:MPInit` | Initialize MicroPython project |
+| `:MPSetPort` | Set the device port |
+| `:MPSetBaud` | Set the baud rate (optional, mpremote auto-detects) |
+| `:MPSetStubs` | Set MicroPython stubs for your board |
+| `:MPListDevices` | List connected MicroPython devices |
+
+### Upload Ignore List
+
+`:MPUploadAll` accepts file or folder names to ignore: `:MPUploadAll test.py unused`
+
+Default ignore list:
+
+```lua
+{
+  '.git', 'requirements.txt', '.ampy', '.micropython', '.vscode',
+  '.gitignore', 'project.pymakr', 'env', 'venv', '__pycache__',
+  '.python-version', '.micropy/', 'micropy.json', '.idea',
+  'README.md', 'LICENSE'
+}
 ```
 
 ## Project Setup
 
-Steps to initialize a project
+Steps to initialize a project:
 
-- Create a new directory for your project
-- Optional but highly recommended create a virtual environment
-- Run `:MPInit` in the project directory, this will create the necessary files and directories. This includes:
-  - `main.py`
-```python
-from machine import Pin
-from time import sleep
+1. Create a new directory for your project
+2. (Optional but recommended) Create a virtual environment
+3. Run `:MPInit` in the project directory. This creates:
+   - `main.py` - starter blink program
+   - `.micropython` - configuration file
+   - `requirements.txt` - Python dependencies
+   - `pyrightconfig.json` - LSP configuration
 
-led = Pin("LED", Pin.OUT)
+4. `:MPSetPort` to set the port (or use `auto` for auto-detection)
+5. `:MPSetStubs` to set the stubs for your board
+6. `pip install -r requirements.txt` to install the required packages
 
-while True:
-    led.value(not led.value())
-    print("LED is ON" if led.value() else "LED is OFF")
-    sleep(0.5)
+### Configuration File
+
+The `.micropython` file stores project configuration:
+
 ```
-- `.ampy` configuration file
-```txt
-AMPY_BAUD=115200
-# AMPY_PORT=
-# Fix for macOS users' "Could not enter raw repl"; try 2.0 and lower from there:
-# AMPY_DELAY=0.5
+PORT=auto
+BAUD=115200
 ```
-  - `requirments.txt` file
-```txt
-adafruit-ampy
-rshell
-micropython-rp2-stubs
-ruff
+
+Port options:
+- `auto` - Auto-detect first USB serial port
+- `/dev/ttyUSB0` - Specific port path
+- `id:<serial>` - Connect by USB serial number
+
+### Multi-File Projects
+
+For projects with multiple files and directories, see the [examples/led_button](./examples/led_button) directory.
+
+Key features for multi-file projects:
+- `:MPUploadAll` recursively uploads directories
+- `:MPSync` mounts local directory for live development
+- `:MPRunMain` runs main.py after upload
+
+### Live Development with MPSync
+
+The `:MPSync` command mounts your local project directory on the device as `/remote`. This allows you to:
+
+1. Edit files locally
+2. Changes are immediately available on device (no upload needed)
+3. Import modules from your local directory
+4. Rapidly iterate without waiting for uploads
+
 ```
-  - `pyrightconfig.json` file
-```json
-{
-  "reportMissingModuleSource": false
-}
+:MPSync        " Mount current directory
+:MPRepl        " Open REPL
+>>> import main  " Run your code
 ```
-- `:MPSetPort` to set the port
-- `:MPSetStubs` to set the stubs for the board
-- `:MPSetBaud` to set the baudrate if not the same as the default `115200`
-- `pip install -r requirments.txt` to install the required packages
 
-Now you be able to run the project using `:MPRun`.
-### Statusline
+## Statusline
 
-A statusline component can be easily added to show whether a buffer is tagged.
+A statusline component shows the current port configuration.
 
-<!-- panvimdoc-ignore-start -->
-
-#### Lualine Component
+### Lualine Component
 
 ```lua
 require("lualine").setup({
@@ -186,18 +233,31 @@ require("lualine").setup({
     }
 })
 ```
+
+<!-- panvimdoc-ignore-start -->
 <img width="1080" alt="image" src="./assets/status.png">
+<!-- panvimdoc-ignore-end -->
 
+## Migration from ampy
 
-## Not implemented (yet)
+This plugin now uses mpremote instead of ampy. If you have existing projects with `.ampy` configuration files:
 
-- [x] upload all files in a directory
-- [x] delete individual files
-- [ ] delete all files
-- [ ] get files from the device file system
+1. The plugin will still read `.ampy` files but will show a deprecation warning
+2. Run `:MPInit` to create a new `.micropython` configuration
+3. Your `.ampy` file can be safely deleted after migration
+
+Key differences:
+- No need for rshell - mpremote has built-in REPL
+- Auto-detection of devices with `PORT=auto`
+- Recursive directory upload with `:MPUploadAll`
+- Live development with `:MPSync` (filesystem mounting)
+
+## Examples
+
+See the [examples](./examples/) directory for complete project examples:
+
+- [led_button](./examples/led_button) - Multi-file project with LED and button modules
 
 ## Inspiration and Thanks
 
 - [nvim-platformio.lua](https://github.com/anurag3301/nvim-platformio.lua)
-
-<!-- panvimdoc-ignore-end -->

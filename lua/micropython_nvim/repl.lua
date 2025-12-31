@@ -1,4 +1,5 @@
 local Config = require('micropython_nvim.config')
+local Utils = require('micropython_nvim.utils')
 local Terminal = require('toggleterm.terminal').Terminal
 
 local M = {}
@@ -13,7 +14,7 @@ function M.open()
     return
   end
 
-  local repl_command = string.format('rshell -p %s repl', Config.get_port())
+  local repl_command = Utils.get_mpremote_base() .. 'repl'
   local term = Terminal:new({ cmd = repl_command, direction = 'float' })
   term:toggle()
 end

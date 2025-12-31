@@ -3,7 +3,7 @@ local M = {}
 ---@param opts? MicroPython.Config
 function M.setup(opts)
   require('micropython_nvim.config').setup(opts)
-  require('micropython_nvim.utils').read_ampy_config()
+  require('micropython_nvim.utils').read_config()
 end
 
 function M.run()
@@ -47,15 +47,44 @@ function M.init()
   require('micropython_nvim.project').init()
 end
 
+function M.sync()
+  require('micropython_nvim.run').sync()
+end
+
+function M.soft_reset()
+  require('micropython_nvim.run').soft_reset()
+end
+
+function M.hard_reset()
+  require('micropython_nvim.run').hard_reset()
+end
+
+function M.list_devices()
+  require('micropython_nvim.setup').show_devices()
+end
+
+function M.list_files()
+  require('micropython_nvim.run').list_files()
+end
+
+function M.run_main()
+  require('micropython_nvim.run').run_main()
+end
+
 ---@return string
 function M.statusline()
   local Config = require('micropython_nvim.config')
-  return ' P:' .. Config.get_port() .. ' BR: ' .. Config.get_baud()
+  local port = Config.get_port()
+  if port == 'auto' then
+    return ' auto'
+  end
+  return ' P:' .. port .. ' BR:' .. Config.get_baud()
 end
 
 ---@return boolean
 function M.exists()
-  return require('micropython_nvim.utils').ampy_config_exists()
+  local Utils = require('micropython_nvim.utils')
+  return Utils.config_exists() or Utils.ampy_config_exists()
 end
 
 ---@deprecated Use setup() instead

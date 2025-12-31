@@ -33,3 +33,31 @@ end, { desc = 'Set MicroPython stubs for board' })
 vim.api.nvim_create_user_command('MPEraseOne', function()
   require('micropython_nvim').erase_one()
 end, { desc = 'Erase single file from MicroPython device' })
+
+vim.api.nvim_create_user_command('MPEraseAll', function()
+  require('micropython_nvim').erase_all()
+end, { desc = 'Erase all files from MicroPython device' })
+
+vim.api.nvim_create_user_command('MPSync', function()
+  require('micropython_nvim').sync()
+end, { desc = 'Mount local directory on device for live development' })
+
+vim.api.nvim_create_user_command('MPReset', function()
+  require('micropython_nvim').soft_reset()
+end, { desc = 'Soft reset MicroPython device' })
+
+vim.api.nvim_create_user_command('MPHardReset', function()
+  require('micropython_nvim').hard_reset()
+end, { desc = 'Hard reset MicroPython device' })
+
+vim.api.nvim_create_user_command('MPListDevices', function()
+  require('micropython_nvim').list_devices()
+end, { desc = 'List connected MicroPython devices' })
+
+vim.api.nvim_create_user_command('MPListFiles', function()
+  require('micropython_nvim').list_files()
+end, { desc = 'List files on MicroPython device' })
+
+vim.api.nvim_create_user_command('MPRunMain', function()
+  require('micropython_nvim').run_main()
+end, { desc = 'Run main.py on MicroPython device' })

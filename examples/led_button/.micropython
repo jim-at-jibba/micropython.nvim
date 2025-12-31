@@ -1,0 +1,3 @@
+# MicroPython project configuration
+PORT=auto
+BAUD=115200

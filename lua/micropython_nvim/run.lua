@@ -9,6 +9,7 @@ M.DEFAULT_IGNORE_LIST = {
   ['.git'] = true,
   ['requirements.txt'] = true,
   ['.ampy'] = true,
+  ['.micropython'] = true,
   ['.vscode'] = true,
   ['.gitignore'] = true,
   ['project.pymakr'] = true,
@@ -18,49 +19,10 @@ M.DEFAULT_IGNORE_LIST = {
   ['.python-version'] = true,
   ['.micropy/'] = true,
   ['micropy.json'] = true,
+  ['.idea'] = true,
+  ['README.md'] = true,
+  ['LICENSE'] = true,
 }
-
----@param path string
----@param cmd_type string
----@return string
-local function _assemble_command(path, cmd_type)
-  return string.format(
-    'ampy -p %s -b %s %s %s',
-    Config.get_port(),
-    Config.get_baud(),
-    cmd_type,
-    path
-  )
-end
-
----@param directory string
----@param ignore_list table<string, boolean>
----@return string[]
-local function _create_upload_commands(directory, ignore_list)
-  local commands = {}
-  local handle = vim.loop.fs_scandir(directory)
-
-  if not handle then
-    vim.notify('Cannot open ' .. directory, vim.log.levels.ERROR, { title = 'micropython.nvim' })
-    return commands
-  end
-
-  while true do
-    local name, _ = vim.loop.fs_scandir_next(handle)
-    if not name then
-      break
-    end
-
-    if not ignore_list[name] then
-      local path = directory .. '/' .. name
-      table.insert(commands, _assemble_command(path, 'put'))
-    else
-      Utils.debug_print(string.format('Ignoring: %s', name))
-    end
-  end
-
-  return commands
-end
 
 ---@param command string
 ---@param command_name string
@@ -109,18 +71,66 @@ end
 ---@return string[]
 local function _get_device_files()
   local files = {}
-  local command = string.format('ampy -p %s -b %s ls', Config.get_port(), Config.get_baud())
+  local command = Utils.get_mpremote_base() .. 'fs ls :'
 
-  local ok, pfile = pcall(io.popen, command)
+  local ok, pfile = pcall(io.popen, command .. ' 2>/dev/null')
   if not ok or not pfile then
     vim.notify('Failed to list device files', vim.log.levels.ERROR, { title = 'micropython.nvim' })
     return files
   end
 
-  for filename in pfile:lines() do
-    table.insert(files, filename)
+  for line in pfile:lines() do
+    local filename = line:match('^%s*%d+%s+(.+)$')
+    if filename then
+      table.insert(files, filename)
+    else
+      local dirname = line:match('^%s*(.+)/$')
+      if dirname then
+        table.insert(files, dirname .. '/')
+      end
+    end
   end
   pfile:close()
+
+  return files
+end
+
+---@param directory string
+---@param ignore_list table<string, boolean>
+---@param base_path? string
+---@return string[]
+local function _collect_files_recursive(directory, ignore_list, base_path)
+  local files = {}
+  base_path = base_path or directory
+  local handle = vim.loop.fs_scandir(directory)
+
+  if not handle then
+    vim.notify('Cannot open ' .. directory, vim.log.levels.ERROR, { title = 'micropython.nvim' })
+    return files
+  end
+
+  while true do
+    local name, file_type = vim.loop.fs_scandir_next(handle)
+    if not name then
+      break
+    end
+
+    if not ignore_list[name] then
+      local full_path = directory .. '/' .. name
+      local relative_path = full_path:sub(#base_path + 2)
+
+      if file_type == 'directory' then
+        local sub_files = _collect_files_recursive(full_path, ignore_list, base_path)
+        for _, f in ipairs(sub_files) do
+          table.insert(files, f)
+        end
+      else
+        table.insert(files, { full = full_path, relative = relative_path })
+      end
+    else
+      Utils.debug_print(string.format('Ignoring: %s', name))
+    end
+  end
 
   return files
 end
@@ -130,14 +140,10 @@ function M.run()
     return
   end
 
-  local ampy_command = string.format(
-    'ampy -p %s -b %s run %s; %s',
-    Config.get_port(),
-    Config.get_baud(),
-    vim.api.nvim_buf_get_name(0),
-    Utils.PRESS_ENTER_PROMPT
-  )
-  local term = Terminal:new({ cmd = ampy_command, direction = 'float' })
+  local file_path = vim.api.nvim_buf_get_name(0)
+  local command =
+    string.format('%srun "%s"; %s', Utils.get_mpremote_base(), file_path, Utils.PRESS_ENTER_PROMPT)
+  local term = Terminal:new({ cmd = command, direction = 'float' })
   term:toggle()
 end
 
@@ -146,26 +152,11 @@ function M.upload_current()
     return
   end
 
-  local buf = vim.api.nvim_get_current_buf()
-  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-  local file_path = '/tmp/' .. vim.fs.basename(vim.api.nvim_buf_get_name(0))
+  local file_path = vim.api.nvim_buf_get_name(0)
+  local filename = vim.fs.basename(file_path)
+  local command = string.format('%scp "%s" :%s', Utils.get_mpremote_base(), file_path, filename)
 
-  local file = io.open(file_path, 'w+')
-  if not file then
-    vim.notify(
-      'Failed to create temp file ' .. file_path,
-      vim.log.levels.ERROR,
-      { title = 'micropython.nvim' }
-    )
-    return
-  end
-
-  for _, line in ipairs(lines) do
-    file:write(line .. '\n')
-  end
-  file:close()
-
-  _async_job(_assemble_command(file_path, 'put'), 'Upload current')
+  _async_job(command, 'Upload ' .. filename)
 end
 
 ---@class MicroPython.UploadAllOptions
@@ -187,15 +178,62 @@ function M.upload_all(opts)
   end
 
   local directory = Utils.get_cwd()
-  local commands = _create_upload_commands(directory, ignore_list)
+  local files = _collect_files_recursive(directory, ignore_list)
 
-  if #commands == 0 then
+  if #files == 0 then
     vim.notify('No files to upload', vim.log.levels.WARN, { title = 'micropython.nvim' })
     return
   end
 
-  local long_command = table.concat(commands, '; ')
-  _async_job(long_command, 'Upload all')
+  local dirs_created = {}
+  local commands = {}
+
+  for _, file_info in ipairs(files) do
+    local dir = vim.fs.dirname(file_info.relative)
+    if dir and dir ~= '.' and not dirs_created[dir] then
+      table.insert(
+        commands,
+        string.format('%sfs mkdir :%s 2>/dev/null || true', Utils.get_mpremote_base(), dir)
+      )
+      dirs_created[dir] = true
+    end
+    table.insert(
+      commands,
+      string.format('%scp "%s" :%s', Utils.get_mpremote_base(), file_info.full, file_info.relative)
+    )
+  end
+
+  local long_command = table.concat(commands, ' && ')
+  _async_job(long_command, 'Upload all (' .. #files .. ' files)')
+end
+
+function M.sync()
+  if not _check_port_configured() then
+    return
+  end
+
+  local directory = Utils.get_cwd()
+  local command = string.format('%smount %s', Utils.get_mpremote_base(), directory)
+  local term = Terminal:new({ cmd = command, direction = 'float' })
+  term:toggle()
+end
+
+function M.soft_reset()
+  if not _check_port_configured() then
+    return
+  end
+
+  local command = Utils.get_mpremote_base() .. 'soft_reset'
+  _async_job(command, 'Soft reset')
+end
+
+function M.hard_reset()
+  if not _check_port_configured() then
+    return
+  end
+
+  local command = Utils.get_mpremote_base() .. 'reset'
+  _async_job(command, 'Hard reset')
 end
 
 function M.erase_all()
@@ -203,13 +241,9 @@ function M.erase_all()
     return
   end
 
-  local ampy_command = string.format(
-    'ampy -p %s -b %s rmdir -r / 2>&1; %s',
-    Config.get_port(),
-    Config.get_baud(),
-    Utils.PRESS_ENTER_PROMPT
-  )
-  local term = Terminal:new({ cmd = ampy_command, direction = 'float' })
+  local command =
+    string.format('%sfs rm -r : 2>&1; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
+  local term = Terminal:new({ cmd = command, direction = 'float' })
   term:toggle()
 end
 
@@ -232,11 +266,33 @@ function M.erase_one()
       return
     end
 
-    local extension = string.match(choice, '%.([^%.]+)$')
-    local cmd_type = extension and 'rm' or 'rmdir'
-    local command = _assemble_command(choice, cmd_type)
-    _async_job(command, 'Delete ' .. (extension and 'file' or 'folder'))
+    local is_dir = choice:match('/$')
+    local cmd_type = is_dir and 'fs rm -r' or 'fs rm'
+    local command = string.format('%s%s :%s', Utils.get_mpremote_base(), cmd_type, choice)
+    _async_job(command, 'Delete ' .. choice)
   end)
+end
+
+function M.list_files()
+  if not _check_port_configured() then
+    return
+  end
+
+  local command =
+    string.format('%sfs ls :; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
+  local term = Terminal:new({ cmd = command, direction = 'float' })
+  term:toggle()
+end
+
+function M.run_main()
+  if not _check_port_configured() then
+    return
+  end
+
+  local command =
+    string.format('%sexec "import main"; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
+  local term = Terminal:new({ cmd = command, direction = 'float' })
+  term:toggle()
 end
 
 return M

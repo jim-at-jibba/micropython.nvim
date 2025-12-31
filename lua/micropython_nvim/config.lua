@@ -1,18 +1,18 @@
 ---@class MicroPython.Config
----@field port? string Device port (e.g., "/dev/ttyUSB0")
----@field baud? number Baud rate for serial communication
+---@field port? string Device port (e.g., "/dev/ttyUSB0", "auto", or "id:<serial>")
+---@field baud? number Baud rate for serial communication (optional, mpremote auto-detects)
 ---@field debug? boolean Enable debug logging
 
 ---@class MicroPython.State
----@field port string
----@field baud string
+---@field port string Current device port
+---@field baud string Baud rate as string (for command assembly)
 ---@field initialized boolean
 
 local M = {}
 
 ---@type MicroPython.Config
 local defaults = {
-  port = '/dev/ttyUSB0',
+  port = 'auto',
   baud = 115200,
   debug = false,
 }
@@ -22,7 +22,7 @@ M.config = {}
 
 ---@type MicroPython.State
 M.state = {
-  port = '',
+  port = 'auto',
   baud = '115200',
   initialized = false,
 }
@@ -62,6 +62,15 @@ end
 ---@return boolean
 function M.is_port_configured()
   return M.state.port ~= nil and M.state.port ~= ''
+end
+
+---@return string
+function M.get_connect_arg()
+  local port = M.state.port
+  if port == 'auto' or port == '' then
+    return ''
+  end
+  return 'connect ' .. port
 end
 
 return M
