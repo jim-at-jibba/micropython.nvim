@@ -5,10 +5,16 @@ local M = {}
 
 M.BOARDS = {
   { id = 'rp2', name = 'Raspberry Pi Pico (RP2)', stub = 'micropython-rp2-stubs' },
+  { id = 'rp2-pico', name = 'Raspberry Pi Pico', stub = 'micropython-rp2-pico-stubs' },
+  { id = 'rp2-pico-w', name = 'Raspberry Pi Pico W', stub = 'micropython-rp2-pico-w-stubs' },
   { id = 'esp32', name = 'ESP32', stub = 'micropython-esp32-stubs' },
+  { id = 'esp32-tinypico', name = 'ESP32 TinyPICO', stub = 'micropython-esp32-um-tinypico-stubs' },
   { id = 'esp8266', name = 'ESP8266', stub = 'micropython-esp8266-stubs' },
   { id = 'stm32', name = 'STM32 / Pyboard', stub = 'micropython-stm32-stubs' },
   { id = 'samd', name = 'SAMD (Wio Terminal, etc.)', stub = 'micropython-samd-stubs' },
+  { id = 'unix', name = 'Unix', stub = 'micropython-unix-stubs' },
+  { id = 'windows', name = 'Windows', stub = 'micropython-windows-stubs' },
+  { id = 'webassembly', name = 'WebAssembly', stub = 'micropython-webassembly-stubs' },
 }
 
 M.DEFAULT_BOARD = 'rp2'

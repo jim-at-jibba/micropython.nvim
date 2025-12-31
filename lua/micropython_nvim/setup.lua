@@ -17,17 +17,17 @@ M.BAUD_RATES = {
 
 ---@type string[]
 M.STUB_OPTIONS = {
-  'micropython-stm32-stubs',
-  'micropython-esp32-stubs',
-  'micropython-esp32-um-tinypico-stubs',
-  'micropython-esp8266-stubs',
   'micropython-rp2-stubs',
   'micropython-rp2-pico-stubs',
   'micropython-rp2-pico-w-stubs',
-  'micropython-windows-stubs',
+  'micropython-esp32-stubs',
+  'micropython-esp32-um-tinypico-stubs',
+  'micropython-esp8266-stubs',
+  'micropython-stm32-stubs',
+  'micropython-samd-stubs',
   'micropython-unix-stubs',
-  'micropython-Webassembly-stubs',
-  'samd-seeed_wio_terminal',
+  'micropython-windows-stubs',
+  'micropython-webassembly-stubs',
 }
 
 ---@return string[]
@@ -212,8 +212,25 @@ function M.set_stubs()
       return
     end
 
-    local requirements_path = Utils.get_cwd() .. '/requirements.txt'
-    local result = Utils.replace_line(requirements_path, 'micropython-', choice)
+    local cwd = Utils.get_cwd()
+    local result = false
+
+    if Utils.pyproject_exists() then
+      local pyproject_path = cwd .. '/pyproject.toml'
+      local new_line = string.format('    "%s",', choice)
+      result = Utils.replace_line(pyproject_path, 'micropython%-.*%-stubs', new_line)
+    elseif Utils.requirements_exists() then
+      local requirements_path = cwd .. '/requirements.txt'
+      result = Utils.replace_line(requirements_path, 'micropython%-.*%-stubs', choice)
+    else
+      vim.notify(
+        'No pyproject.toml or requirements.txt found. Run :MPInit first.',
+        vim.log.levels.WARN,
+        { title = 'micropython.nvim' }
+      )
+      return
+    end
+
     if result then
       vim.notify(
         'MicroPython stubs set to: ' .. choice,
