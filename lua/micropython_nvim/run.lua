@@ -281,7 +281,7 @@ function M.list_files()
   end
 
   local command =
-    string.format('%sfs ls :; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
+    string.format('%stree :; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
   local term = Terminal:new({ cmd = command, direction = 'float' })
   term:toggle()
 end
