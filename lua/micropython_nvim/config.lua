@@ -1,7 +1,11 @@
+---@class MicroPython.UIConfig
+---@field picker_layout? string Snacks picker layout preset ("default", "dropdown", "select", "ivy", etc.)
+
 ---@class MicroPython.Config
 ---@field port? string Device port (e.g., "/dev/ttyUSB0", "auto", or "id:<serial>")
 ---@field baud? number Baud rate for serial communication (optional, mpremote auto-detects)
 ---@field debug? boolean Enable debug logging
+---@field ui? MicroPython.UIConfig UI configuration (requires snacks.nvim)
 
 ---@class MicroPython.State
 ---@field port string Current device port
@@ -15,6 +19,9 @@ local defaults = {
   port = 'auto',
   baud = 115200,
   debug = false,
+  ui = {
+    picker_layout = 'select',
+  },
 }
 
 ---@type MicroPython.Config

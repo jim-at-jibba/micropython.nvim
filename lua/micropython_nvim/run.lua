@@ -1,5 +1,6 @@
 local Config = require('micropython_nvim.config')
 local Utils = require('micropython_nvim.utils')
+local UI = require('micropython_nvim.ui')
 local Terminal = require('toggleterm.terminal').Terminal
 
 local M = {}
@@ -262,7 +263,7 @@ function M.erase_one()
     return
   end
 
-  vim.ui.select(files, {
+  UI.select(files, {
     prompt = 'Select a file on device to delete:',
   }, function(choice)
     if not choice then

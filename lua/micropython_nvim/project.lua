@@ -1,4 +1,5 @@
 local Utils = require('micropython_nvim.utils')
+local UI = require('micropython_nvim.ui')
 
 local M = {}
 
@@ -107,7 +108,7 @@ end
 ---@param cwd string
 local function _prompt_uv_sync(cwd)
   if Utils.uv_available() then
-    vim.ui.select({ 'Yes', 'No' }, {
+    UI.select({ 'Yes', 'No' }, {
       prompt = 'Run `uv sync` to install dependencies?',
     }, function(choice)
       if choice == 'Yes' then
@@ -191,7 +192,7 @@ local function _select_board_and_create()
     table.insert(board_names, board.name)
   end
 
-  vim.ui.select(board_names, {
+  UI.select(board_names, {
     prompt = 'Select target board:',
   }, function(choice)
     if not choice then
@@ -234,7 +235,7 @@ function M.init(force)
   end
 
   if #existing_files > 0 and not force then
-    vim.ui.select({ 'Yes', 'No' }, {
+    UI.select({ 'Yes', 'No' }, {
       prompt = 'Files exist (' .. table.concat(existing_files, ', ') .. '). Overwrite?',
     }, function(choice)
       if choice == 'Yes' then

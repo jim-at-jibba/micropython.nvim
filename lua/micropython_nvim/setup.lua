@@ -1,5 +1,6 @@
 local Config = require('micropython_nvim.config')
 local Utils = require('micropython_nvim.utils')
+local UI = require('micropython_nvim.ui')
 
 local M = {}
 
@@ -117,7 +118,7 @@ function M.show_devices()
 end
 
 function M.set_baud_rate()
-  vim.ui.select(M.BAUD_RATES, {
+  UI.select(M.BAUD_RATES, {
     prompt = 'Select baud rate:',
   }, function(choice)
     if not choice then
@@ -168,7 +169,7 @@ function M.set_port()
     return
   end
 
-  vim.ui.select(ports, {
+  UI.select(ports, {
     prompt = 'Select a port:',
   }, function(choice)
     if not choice then
@@ -204,7 +205,7 @@ function M.set_port()
 end
 
 function M.set_stubs()
-  vim.ui.select(M.STUB_OPTIONS, {
+  UI.select(M.STUB_OPTIONS, {
     prompt = 'Select stubs for board:',
   }, function(choice)
     if not choice then

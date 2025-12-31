@@ -51,7 +51,7 @@ N.B. If you open an existing project that has a `.micropython` configuration fil
 
 - [Neovim >= 0.9](https://github.com/neovim/neovim/releases/tag/v0.9.0)
 - [toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)
-- [dressing.nvim](https://github.com/stevearc/dressing.nvim) (optional)
+- [snacks.nvim](https://github.com/folke/snacks.nvim) (optional, for enhanced picker UI)
 - [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html)
 - [uv](https://docs.astral.sh/uv/) (for dependency management, Unix-only)
 
@@ -81,7 +81,7 @@ pip install mpremote
 ```lua
 {
     "jim-at-jibba/micropython.nvim",
-    dependencies = { "akinsho/toggleterm.nvim", "stevearc/dressing.nvim" },
+    dependencies = { "akinsho/toggleterm.nvim", "folke/snacks.nvim" },
 }
 ```
 
@@ -93,7 +93,7 @@ pip install mpremote
 ```lua
 use {
     "jim-at-jibba/micropython.nvim",
-    requires = { "akinsho/toggleterm.nvim", "stevearc/dressing.nvim" },
+    requires = { "akinsho/toggleterm.nvim", "folke/snacks.nvim" },
 }
 ```
 
