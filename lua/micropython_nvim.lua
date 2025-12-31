@@ -1,73 +1,71 @@
-local run = require('micropython_nvim.run')
-local setup = require('micropython_nvim.setup')
-local utils = require('micropython_nvim.utils')
-local repl = require('micropython_nvim.repl')
-local project = require('micropython_nvim.project')
+local M = {}
 
-local MP = {}
-
-function MP.repl()
-  repl.repl()
+---@param opts? MicroPython.Config
+function M.setup(opts)
+  require('micropython_nvim.config').setup(opts)
+  require('micropython_nvim.utils').read_ampy_config()
 end
 
-function MP.run()
-  run.mprun()
+function M.run()
+  require('micropython_nvim.run').run()
 end
 
-function MP.upload_current()
-  run.mp_upload_current()
+function M.repl()
+  require('micropython_nvim.repl').open()
 end
 
-function MP.upload_all(opt)
-  run.mp_upload_all(opt)
+function M.upload_current()
+  require('micropython_nvim.run').upload_current()
 end
 
-function MP.set_baud_rate()
-  setup.set_baud_rate()
+---@param opts? MicroPython.UploadAllOptions
+function M.upload_all(opts)
+  require('micropython_nvim.run').upload_all(opts)
 end
 
-function MP.set_port()
-  setup.set_port()
+function M.set_baud_rate()
+  require('micropython_nvim.setup').set_baud_rate()
 end
 
-function MP.erase_all()
-  run.erase_all()
+function M.set_port()
+  require('micropython_nvim.setup').set_port()
 end
 
-function MP.erase_one()
-  run.erase_one()
-end
-function MP.set_stubs()
-  setup.set_stubs()
+function M.set_stubs()
+  require('micropython_nvim.setup').set_stubs()
 end
 
-function MP.init()
-  project.init()
+function M.erase_all()
+  require('micropython_nvim.run').erase_all()
 end
 
-function MP.statusline()
-  return ' P:' .. _G['AMPY_PORT'] .. ' BR: ' .. _G['AMPY_BAUD']
+function M.erase_one()
+  require('micropython_nvim.run').erase_one()
 end
 
-function MP.exists()
-  local cw_dir = vim.fn.getcwd()
-  return vim.fn.glob(cw_dir .. '/.ampy') ~= ''
+function M.init()
+  require('micropython_nvim.project').init()
 end
 
-function MP.initialise()
-  utils.readAmpyConfig()
-  vim.api.nvim_create_user_command('MPRun', MP.run, {})
-  vim.api.nvim_create_user_command('MPUpload', MP.upload_current, {})
-  vim.api.nvim_create_user_command('MPUploadAll', function(opt)
-    MP.upload_all(opt)
-  end, { nargs = '?' })
-  vim.api.nvim_create_user_command('MPSetBaud', MP.set_baud_rate, {})
-  vim.api.nvim_create_user_command('MPSetPort', MP.set_port, {})
-  vim.api.nvim_create_user_command('MPRepl', MP.repl, {})
-  vim.api.nvim_create_user_command('MPInit', MP.init, {})
-  vim.api.nvim_create_user_command('MPSetStubs', MP.set_stubs, {})
-  -- vim.api.nvim_create_user_command('MPEraseAll', MP.erase_all, {})
-  vim.api.nvim_create_user_command('MPEraseOne', MP.erase_one, {})
+---@return string
+function M.statusline()
+  local Config = require('micropython_nvim.config')
+  return ' P:' .. Config.get_port() .. ' BR: ' .. Config.get_baud()
 end
 
-return MP
+---@return boolean
+function M.exists()
+  return require('micropython_nvim.utils').ampy_config_exists()
+end
+
+---@deprecated Use setup() instead
+function M.initialise()
+  vim.notify(
+    'initialise() is deprecated, use setup() instead',
+    vim.log.levels.WARN,
+    { title = 'micropython.nvim' }
+  )
+  M.setup()
+end
+
+return M

@@ -1,98 +1,142 @@
-local debug = false
+local Config = require('micropython_nvim.config')
+
 local M = {}
 
-M.extra = 'printf "\\\\n\\\\033[0;33mPlease Press ENTER to continue \\\\033[0m"; read'
+M.PRESS_ENTER_PROMPT = 'printf "\\n\\033[0;33mPlease Press ENTER to continue \\033[0m"; read'
 
--- NOTE(JGB): Cant get this to work without printing to the screen
---- Checks if 'ampy' is installed in the current Python environment.
--- @return true if 'ampy' is found, false otherwise.
+---@param message string
+function M.debug_print(message)
+  if Config.is_debug() then
+    print(message)
+  end
+end
+
+---@return boolean
 function M.ampy_install_check()
-  local handle = io.popen('pip show ampy')
+  local ok, handle = pcall(io.popen, 'pip show ampy')
+  if not ok or not handle then
+    vim.notify(
+      'Failed to check ampy installation',
+      vim.log.levels.WARN,
+      { title = 'micropython.nvim' }
+    )
+    return false
+  end
 
   local result = handle:read('*a')
   handle:close()
 
-  if result:match('ampy') then -- checks if 'ampy' is in the result
+  if result:match('ampy') then
     return true
   else
-    vim.notify('Ampy not found in the current venv', vim.log.levels.ERROR)
+    vim.notify(
+      'Ampy not found in the current venv',
+      vim.log.levels.ERROR,
+      { title = 'micropython.nvim' }
+    )
     return false
   end
 end
 
---- Reads the .ampy configuration file in the current working directory and sets the variables in it as global variables.
--- The .ampy file should contain lines in the format 'KEY=VALUE'.
-function M.readAmpyConfig()
-  local cw_dir = vim.fn.getcwd()
-  local ampy_path = cw_dir .. '/.ampy'
-  if vim.fn.filereadable(ampy_path) == 0 then
-    if debug then
-      vim.notify('No .ampy file found in the current directory', vim.log.levels.ERROR)
-    end
+---@return string
+function M.get_cwd()
+  return vim.fn.getcwd()
+end
+
+---@return string
+function M.get_ampy_path()
+  return M.get_cwd() .. '/.ampy'
+end
+
+---@return boolean
+function M.ampy_config_exists()
+  return vim.fn.filereadable(M.get_ampy_path()) == 1
+end
+
+function M.read_ampy_config()
+  local ampy_path = M.get_ampy_path()
+  if not M.ampy_config_exists() then
+    M.debug_print('No .ampy file found in the current directory')
     return
   end
+
   local handle = io.open(ampy_path, 'r')
+  if not handle then
+    vim.notify('Failed to open .ampy file', vim.log.levels.ERROR, { title = 'micropython.nvim' })
+    return
+  end
 
-  if handle ~= nil then
-    local result = handle:read('*a')
+  local result = handle:read('*a')
+  handle:close()
 
-    local lines = {}
-    for s in result:gmatch('[^\r\n]+') do
-      table.insert(lines, s)
-    end
-
-    for _, line in ipairs(lines) do
-      -- Split the line on "="
-      local key, value = line:match('([^=]+)=([^=]+)')
-      if key and value then
-        -- Trim whitespace
-        key = key:match('^%s*(.-)%s*$')
-        value = value:match('^%s*(.-)%s*$')
-        -- Assign to global variable
-        _G[key] = value
+  for line in result:gmatch('[^\r\n]+') do
+    local key, value = line:match('([^=]+)=([^=]+)')
+    if key and value then
+      key = key:match('^%s*(.-)%s*$')
+      value = value:match('^%s*(.-)%s*$')
+      if key == 'AMPY_PORT' then
+        Config.set_port(value)
+      elseif key == 'AMPY_BAUD' then
+        Config.set_baud(value)
       end
     end
-
-    handle:close()
-    vim.notify('Ampy config variables set from .ampy file', vim.log.levels.INFO)
   end
+
+  vim.notify(
+    'Ampy config loaded from .ampy file',
+    vim.log.levels.INFO,
+    { title = 'micropython.nvim' }
+  )
 end
 
---- Creates a new file at the specified path and writes a template string to it.
--- @param path The path where the file should be created.
--- @param template The string that should be written to the file.
+---@param path string
+---@param template string
+---@return boolean
 function M.create_file_with_template(path, template)
-  -- Open or create the file at the specified path for writing
   local file, err = io.open(path, 'w')
-  if err then
-    -- Error handling if the file cannot be opened/created
-    print('Error creating file:', err)
-    return
-  end
-
-  -- Write the template content to the file
-  file:write(template)
-
-  -- Close the file
-  file:close()
-
-  print('File created successfully with template content at ' .. path)
-end
-
---- Replaces a line in a file that contains a specific string (needle) with a new line (replacement).
--- @param file The path to the file.
--- @param needle The string to search for in the file.
--- @param replacement The string to replace the found line with.
--- @usage replaceLine('/path/to/file', 'search string', 'replacement string')
-function M.replaceLine(file, needle, replacement)
-  M.debugPrint(string.format('Replacing line in file: %s %s %s', file, needle, replacement))
-  local temp_file = io.open(file .. '_temp', 'w')
-  if not temp_file then
-    vim.notify('Failed to open temporary file for writing', vim.log.levels.ERROR)
+  if not file then
+    vim.notify(
+      'Error creating file: ' .. (err or 'unknown'),
+      vim.log.levels.ERROR,
+      { title = 'micropython.nvim' }
+    )
     return false
   end
 
-  for line in io.lines(file) do
+  file:write(template)
+  file:close()
+  M.debug_print('File created successfully at ' .. path)
+  return true
+end
+
+---@param file_path string
+---@param needle string
+---@param replacement string
+---@return boolean
+function M.replace_line(file_path, needle, replacement)
+  M.debug_print(string.format('Replacing line in file: %s %s %s', file_path, needle, replacement))
+
+  if vim.fn.filereadable(file_path) ~= 1 then
+    vim.notify(
+      'File not readable: ' .. file_path,
+      vim.log.levels.ERROR,
+      { title = 'micropython.nvim' }
+    )
+    return false
+  end
+
+  local temp_path = file_path .. '_temp'
+  local temp_file = io.open(temp_path, 'w')
+  if not temp_file then
+    vim.notify(
+      'Failed to open temporary file for writing',
+      vim.log.levels.ERROR,
+      { title = 'micropython.nvim' }
+    )
+    return false
+  end
+
+  for line in io.lines(file_path) do
     if not line:match(needle) then
       temp_file:write(line .. '\n')
     else
@@ -100,14 +144,18 @@ function M.replaceLine(file, needle, replacement)
     end
   end
   temp_file:close()
-  os.rename(file .. '_temp', file)
-  return true
-end
 
-function M.debugPrint(message)
-  if debug then
-    print(message)
+  local ok, err = os.rename(temp_path, file_path)
+  if not ok then
+    vim.notify(
+      'Failed to rename temp file: ' .. (err or 'unknown'),
+      vim.log.levels.ERROR,
+      { title = 'micropython.nvim' }
+    )
+    return false
   end
+
+  return true
 end
 
 return M
