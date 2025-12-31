@@ -12,8 +12,31 @@ function M.debug_print(message)
 end
 
 ---@return boolean
+function M.uv_available()
+  return vim.fn.executable('uv') == 1
+end
+
+---@return string
+function M.get_cwd()
+  return vim.fn.getcwd()
+end
+
+---@return boolean
+function M.pyproject_exists()
+  return vim.fn.filereadable(M.get_cwd() .. '/pyproject.toml') == 1
+end
+
+---@return boolean
+local function _is_uv_project()
+  return M.uv_available() and M.pyproject_exists()
+end
+
+---@return boolean
 function M.mpremote_install_check()
-  local ok, handle = pcall(io.popen, 'mpremote --version 2>/dev/null')
+  local is_uv = M.uv_available() and M.pyproject_exists()
+  local cmd = is_uv and 'uv run mpremote --version 2>/dev/null' or 'mpremote --version 2>/dev/null'
+
+  local ok, handle = pcall(io.popen, cmd)
   if not ok or not handle then
     vim.notify(
       'Failed to check mpremote installation',
@@ -29,8 +52,9 @@ function M.mpremote_install_check()
   if result:match('mpremote') then
     return true
   else
+    local install_hint = is_uv and 'uv sync' or 'pip install mpremote'
     vim.notify(
-      'mpremote not found. Install with: pip install mpremote',
+      'mpremote not found. Install with: ' .. install_hint,
       vim.log.levels.ERROR,
       { title = 'micropython.nvim' }
     )
@@ -43,11 +67,6 @@ end
 function M.ampy_install_check()
   M.debug_print('ampy_install_check is deprecated, use mpremote_install_check')
   return M.mpremote_install_check()
-end
-
----@return string
-function M.get_cwd()
-  return vim.fn.getcwd()
 end
 
 ---@return string
@@ -222,21 +241,12 @@ end
 
 ---@return string
 function M.get_mpremote_base()
+  local base = _is_uv_project() and 'uv run mpremote ' or 'mpremote '
   local connect_arg = Config.get_connect_arg()
   if connect_arg ~= '' then
-    return 'mpremote ' .. connect_arg .. ' '
+    return base .. connect_arg .. ' '
   end
-  return 'mpremote '
-end
-
----@return boolean
-function M.uv_available()
-  return vim.fn.executable('uv') == 1
-end
-
----@return boolean
-function M.pyproject_exists()
-  return vim.fn.filereadable(M.get_cwd() .. '/pyproject.toml') == 1
+  return base
 end
 
 ---@return boolean
