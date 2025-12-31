@@ -232,7 +232,7 @@ end, { nargs = "?", desc = "Description" })
 ## Conventions
 - Config state: Use `config.lua` module instead of `_G` table
 - Command assembly: Use `string.format()` for ampy/rshell commands
-- Terminal usage: Use `toggleterm.terminal.Terminal:new({ direction = "float" })`
+- Terminal usage: Use `Snacks.terminal(command)` for floating terminals
 - Async operations: Use `vim.fn.jobstart()` with `on_exit` callback
 - File operations: Use `vim.fn` functions for file I/O in user-facing code, `io.*` for internals
 - Project root: All operations assume Neovim opened at project root

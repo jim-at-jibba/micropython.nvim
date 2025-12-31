@@ -50,8 +50,7 @@ N.B. If you open an existing project that has a `.micropython` configuration fil
 ## Requirements
 
 - [Neovim >= 0.9](https://github.com/neovim/neovim/releases/tag/v0.9.0)
-- [toggleterm.nvim](https://github.com/akinsho/toggleterm.nvim)
-- [snacks.nvim](https://github.com/folke/snacks.nvim) (optional, for enhanced picker UI)
+- [snacks.nvim](https://github.com/folke/snacks.nvim)
 - [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html)
 - [uv](https://docs.astral.sh/uv/) (for dependency management, Unix-only)
 
@@ -81,7 +80,7 @@ pip install mpremote
 ```lua
 {
     "jim-at-jibba/micropython.nvim",
-    dependencies = { "akinsho/toggleterm.nvim", "folke/snacks.nvim" },
+    dependencies = { "folke/snacks.nvim" },
 }
 ```
 
@@ -93,7 +92,7 @@ pip install mpremote
 ```lua
 use {
     "jim-at-jibba/micropython.nvim",
-    requires = { "akinsho/toggleterm.nvim", "folke/snacks.nvim" },
+    requires = { "folke/snacks.nvim" },
 }
 ```
 
@@ -153,6 +152,15 @@ vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
 | `:MPSetBaud` | Set the baud rate (optional, mpremote auto-detects) |
 | `:MPSetStubs` | Set MicroPython stubs for your board |
 | `:MPListDevices` | List connected MicroPython devices |
+
+### Terminal Keymaps
+
+Commands that open a terminal (`:MPRun`, `:MPRepl`, etc.) use snacks.nvim terminal:
+
+| Key | Mode | Action |
+|-----|------|--------|
+| `<Esc><Esc>` | Terminal | Exit to normal mode |
+| `q` | Normal | Close terminal |
 
 ### Upload Ignore List
 

@@ -1,7 +1,6 @@
 local Config = require('micropython_nvim.config')
 local Utils = require('micropython_nvim.utils')
 local UI = require('micropython_nvim.ui')
-local Terminal = require('toggleterm.terminal').Terminal
 
 local M = {}
 
@@ -147,8 +146,7 @@ function M.run()
   local file_path = vim.api.nvim_buf_get_name(0)
   local command =
     string.format('%srun "%s"; %s', Utils.get_mpremote_base(), file_path, Utils.PRESS_ENTER_PROMPT)
-  local term = Terminal:new({ cmd = command, direction = 'float' })
-  term:toggle()
+  Snacks.terminal(command)
 end
 
 function M.upload_current()
@@ -216,8 +214,7 @@ function M.sync()
 
   local directory = Utils.get_cwd()
   local command = string.format('%smount %s', Utils.get_mpremote_base(), directory)
-  local term = Terminal:new({ cmd = command, direction = 'float' })
-  term:toggle()
+  Snacks.terminal(command)
 end
 
 function M.soft_reset()
@@ -245,8 +242,7 @@ function M.erase_all()
 
   local command =
     string.format('%sfs rm -r : 2>&1; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
-  local term = Terminal:new({ cmd = command, direction = 'float' })
-  term:toggle()
+  Snacks.terminal(command)
 end
 
 function M.erase_one()
@@ -282,8 +278,7 @@ function M.list_files()
 
   local command =
     string.format('%stree :; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
-  local term = Terminal:new({ cmd = command, direction = 'float' })
-  term:toggle()
+  Snacks.terminal(command)
 end
 
 function M.run_main()
@@ -296,8 +291,7 @@ function M.run_main()
     Utils.get_mpremote_base(),
     Utils.PRESS_ENTER_PROMPT
   )
-  local term = Terminal:new({ cmd = command, direction = 'float' })
-  term:toggle()
+  Snacks.terminal(command)
 end
 
 return M

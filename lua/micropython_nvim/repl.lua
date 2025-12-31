@@ -1,6 +1,5 @@
 local Config = require('micropython_nvim.config')
 local Utils = require('micropython_nvim.utils')
-local Terminal = require('toggleterm.terminal').Terminal
 
 local M = {}
 
@@ -15,8 +14,7 @@ function M.open()
   end
 
   local repl_command = Utils.get_mpremote_base() .. 'repl'
-  local term = Terminal:new({ cmd = repl_command, direction = 'float' })
-  term:toggle()
+  Snacks.terminal(repl_command)
 end
 
 return M
