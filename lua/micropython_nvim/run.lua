@@ -190,25 +190,23 @@ function M.upload_all(opts)
   end
 
   local dirs_created = {}
-  local commands = {}
+  local mpremote_commands = {}
 
   for _, file_info in ipairs(files) do
     local dir = vim.fs.dirname(file_info.relative)
     if dir and dir ~= '.' and not dirs_created[dir] then
-      table.insert(
-        commands,
-        string.format('%sfs mkdir :%s 2>/dev/null || true', Utils.get_mpremote_base(), dir)
-      )
+      table.insert(mpremote_commands, string.format('fs mkdir :%s', dir))
       dirs_created[dir] = true
     end
     table.insert(
-      commands,
-      string.format('%scp "%s" :%s', Utils.get_mpremote_base(), file_info.full, file_info.relative)
+      mpremote_commands,
+      string.format('cp "%s" :%s', file_info.full, file_info.relative)
     )
   end
 
-  local long_command = table.concat(commands, ' && ')
-  _async_job(long_command, 'Upload all (' .. #files .. ' files)')
+  local command = Utils.get_mpremote_base() .. table.concat(mpremote_commands, ' + ')
+  Utils.debug_print('Upload command: ' .. command)
+  _async_job(command, 'Upload all (' .. #files .. ' files)')
 end
 
 function M.sync()
@@ -293,8 +291,11 @@ function M.run_main()
     return
   end
 
-  local command =
-    string.format('%sexec "import main"; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
+  local command = string.format(
+    '%sexec "exec(open(\'main.py\').read())"; %s',
+    Utils.get_mpremote_base(),
+    Utils.PRESS_ENTER_PROMPT
+  )
   local term = Terminal:new({ cmd = command, direction = 'float' })
   term:toggle()
 end
