@@ -16,6 +16,7 @@ function M.select(items, opts, on_choice)
     snacks.picker.pick({
       source = 'select',
       items = picker_items,
+      format = 'text',
       prompt = opts.prompt,
       layout = Config.config.ui and Config.config.ui.picker_layout or 'select',
       confirm = function(picker, item)
