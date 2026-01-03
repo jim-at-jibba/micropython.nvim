@@ -1,0 +1,294 @@
+*stride.txt*          For Neovim >= 0.8.0         Last change: 2026 January 03
+
+==============================================================================
+Table of Contents                                   *stride-table-of-contents*
+
+1. micropython_nvim                                  |stride-micropython_nvim|
+  - Introduction                        |stride-micropython_nvim-introduction|
+  - Goals                                      |stride-micropython_nvim-goals|
+  - Features                                |stride-micropython_nvim-features|
+  - Requirements                        |stride-micropython_nvim-requirements|
+  - Installation                        |stride-micropython_nvim-installation|
+  - Quickstart                            |stride-micropython_nvim-quickstart|
+  - Usage                                      |stride-micropython_nvim-usage|
+  - Project Setup                      |stride-micropython_nvim-project-setup|
+  - Statusline                            |stride-micropython_nvim-statusline|
+
+==============================================================================
+1. micropython_nvim                                  *stride-micropython_nvim*
+
+
+INTRODUCTION                            *stride-micropython_nvim-introduction*
+
+micropython_nvim is a plugin that aims to make it easier and more enjoyable to
+work on MicroPython projects in Neovim. It uses mpremote
+<https://docs.micropython.org/en/latest/reference/mpremote.html>, the official
+MicroPython remote control tool.
+
+See the |stride-quickstart| section to get started.
+
+N.B. If you open an existing project that has a `.micropython` configuration
+file in the root directory, the plugin will automatically configure the port
+and baud rate for you.
+
+**IMPORTANT** This plugin assumes you are opening Neovim at the root of the
+project. Some commands will not behave in the expected way if you choose not to
+do this.
+
+
+GOALS                                          *stride-micropython_nvim-goals*
+
+- Run and upload python files directly to your micro-controller from Neovim
+- Easy multi-file project support with recursive directory upload
+- Live development with filesystem mounting
+- General file management on device
+- Easy management of port, baudrate, and other settings
+- Easy project environment setup
+- Built-in REPL access
+
+
+FEATURES                                    *stride-micropython_nvim-features*
+
+- **Run** local python files on your micro-controller
+- **Upload** local python files to your micro-controller (including recursive directory upload)
+- **Sync** mount local directory for live development without uploading
+- **REPL** access via mpremote
+- **File management** - list, delete files on device
+- **Device management** - list connected devices, reset
+- **Project initialization**
+
+
+REQUIREMENTS                            *stride-micropython_nvim-requirements*
+
+- Neovim >= 0.9 <https://github.com/neovim/neovim/releases/tag/v0.9.0>
+- snacks.nvim <https://github.com/folke/snacks.nvim>
+- mpremote <https://docs.micropython.org/en/latest/reference/mpremote.html>
+- uv <https://docs.astral.sh/uv/> (for dependency management, Unix-only)
+
+
+INSTALLATION                            *stride-micropython_nvim-installation*
+
+
+PREREQUISITES ~
+
+Install uv (Unix/macOS):
+
+>bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+<
+
+Install mpremote (will be installed automatically by `uv sync`, or manually):
+
+>bash
+    uv tool install mpremote
+    # or
+    pip install mpremote
+<
+
+
+PLUGIN INSTALLATION ~
+
+lazy.nvim ~
+
+>lua
+    {
+        "jim-at-jibba/micropython.nvim",
+        dependencies = { "folke/snacks.nvim" },
+    }
+<
+
+packer ~
+
+>lua
+    use {
+        "jim-at-jibba/micropython.nvim",
+        requires = { "folke/snacks.nvim" },
+    }
+<
+
+
+QUICKSTART                                *stride-micropython_nvim-quickstart*
+
+1. |stride-install| micropython_nvim using your preferred package manager
+2. Add a keybind to `run` function:
+
+>lua
+    vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
+<
+
+1. Follow the |stride-project-setup| steps to create the necessary files for a new project.
+
+**Next steps**
+
+- Add a |stride-statusline-component|
+- See the examples <./examples/> directory for multi-file project examples
+
+
+USAGE                                          *stride-micropython_nvim-usage*
+
+
+CORE COMMANDS ~
+
+  Command        Description
+  -------------- -----------------------------------------------
+  :MPRun         Run current buffer on the micro-controller
+  :MPRunMain     Run main.py on the device
+  :MPUpload      Upload current buffer to the micro-controller
+  :MPUploadAll   Upload all project files (recursive)
+  :MPRepl        Open MicroPython REPL
+
+DEVELOPMENT COMMANDS ~
+
+  Command        Description
+  -------------- ------------------------------------------------------
+  :MPSync        Mount local directory on device for live development
+  :MPReset       Soft reset the device
+  :MPHardReset   Hard reset the device
+
+FILE MANAGEMENT ~
+
+  Command        Description
+  -------------- ------------------------------------------
+  :MPListFiles   List files on device
+  :MPEraseOne    Delete single file or folder from device
+  :MPEraseAll    Delete all files from device
+
+SETUP COMMANDS ~
+
+  -----------------------------------------------------------------------
+  Command                       Description
+  ----------------------------- -----------------------------------------
+  :MPInit                       Initialize MicroPython project (creates
+                                pyproject.toml, selects board)
+
+  :MPInstall                    Install project dependencies with uv
+
+  :MPSetPort                    Set the device port
+
+  :MPSetBaud                    Set the baud rate (optional, mpremote
+                                auto-detects)
+
+  :MPSetStubs                   Set MicroPython stubs for your board
+
+  :MPListDevices                List connected MicroPython devices
+  -----------------------------------------------------------------------
+
+TERMINAL KEYMAPS ~
+
+Commands that open a terminal (`:MPRun`, `:MPRepl`, etc.) use snacks.nvim
+terminal:
+
+  Key          Mode       Action
+  ------------ ---------- ---------------------
+  <Esc><Esc>   Terminal   Exit to normal mode
+  q            Normal     Close terminal
+
+UPLOAD IGNORE LIST ~
+
+`:MPUploadAll` accepts file or folder names to ignore: `:MPUploadAll test.py
+unused`
+
+Default ignore list:
+
+>lua
+    {
+      '.git', 'pyproject.toml', 'uv.lock', '.ampy', '.micropython', '.vscode',
+      '.gitignore', 'project.pymakr', 'env', 'venv', '.venv', '__pycache__',
+      '.python-version', '.micropy/', 'micropy.json', '.idea',
+      'README.md', 'LICENSE', 'requirements.txt'
+    }
+<
+
+
+PROJECT SETUP                          *stride-micropython_nvim-project-setup*
+
+Steps to initialize a project:
+
+1. Create a new directory for your project
+2. Open Neovim in the project directory
+3. Run `:MPInit` - this will:- Prompt you to select your target board (RP2, ESP32, etc.)
+- Create `pyproject.toml` with dependencies and stubs
+- Create `main.py` - starter blink program
+- Create `.micropython` - device configuration
+- Create `pyrightconfig.json` - LSP configuration
+- Create `.gitignore`
+- Optionally run `uv sync` to install dependencies
+
+
+4. If you skipped the install prompt, run `:MPInstall` to install dependencies
+5. Run `:MPSetPort` to set the port (or use `auto` for auto-detection)
+
+
+SUPPORTED BOARDS ~
+
+  Board                     Stub Package
+  ------------------------- ---------------------------
+  Raspberry Pi Pico (RP2)   micropython-rp2-stubs
+  ESP32                     micropython-esp32-stubs
+  ESP8266                   micropython-esp8266-stubs
+  STM32 / Pyboard           micropython-stm32-stubs
+  SAMD (Wio Terminal)       micropython-samd-stubs
+
+CONFIGURATION FILE ~
+
+The `.micropython` file stores project configuration:
+
+>
+    PORT=auto
+    BAUD=115200
+<
+
+Port options: - `auto` - Auto-detect first USB serial port - `/dev/ttyUSB0` -
+Specific port path - `id:<serial>` - Connect by USB serial number
+
+
+MULTI-FILE PROJECTS ~
+
+For projects with multiple files and directories, see the examples/led_button
+<./examples/led_button> directory.
+
+Key features for multi-file projects: - `:MPUploadAll` recursively uploads
+directories - `:MPSync` mounts local directory for live development -
+`:MPRunMain` runs main.py after upload
+
+
+LIVE DEVELOPMENT WITH MPSYNC ~
+
+The `:MPSync` command mounts your local project directory on the device as
+`/remote`. This allows you to:
+
+1. Edit files locally
+2. Changes are immediately available on device (no upload needed)
+3. Import modules from your local directory
+4. Rapidly iterate without waiting for uploads
+
+>
+    :MPSync        " Mount current directory
+    :MPRepl        " Open REPL
+    >>> import main  " Run your code
+<
+
+
+STATUSLINE                                *stride-micropython_nvim-statusline*
+
+A statusline component shows the current port configuration.
+
+
+LUALINE COMPONENT ~
+
+>lua
+    require("lualine").setup({
+        sections = {
+            lualine_b = {
+                {
+                  require("micropython_nvim").statusline,
+                  cond = package.loaded["micropython_nvim"] and require("micropython_nvim").exists,
+                },
+            }
+        }
+    })
+<
+
+Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
+
+vim:tw=78:ts=8:noet:ft=help:norl:
