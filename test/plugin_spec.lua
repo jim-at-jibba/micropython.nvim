@@ -1,116 +1,149 @@
+local helpers = require('test.helpers')
+
 describe('micropython_nvim', function()
-  local Config = require('micropython_nvim.config')
-  local Utils = require('micropython_nvim.utils')
+  local M
+  local Config
 
   before_each(function()
+    helpers.reset_modules()
+    Config = require('micropython_nvim.config')
     Config.setup({})
-  end)
-
-  describe('config', function()
-    it('should have default port as auto', function()
-      assert.equals('auto', Config.get_port())
-    end)
-
-    it('should have default baud rate as 115200', function()
-      assert.equals('115200', Config.get_baud())
-    end)
-
-    it('should set port correctly', function()
-      Config.set_port('/dev/ttyUSB0')
-      assert.equals('/dev/ttyUSB0', Config.get_port())
-    end)
-
-    it('should set baud rate correctly', function()
-      Config.set_baud('9600')
-      assert.equals('9600', Config.get_baud())
-    end)
-
-    it('should return empty connect arg for auto port', function()
-      Config.set_port('auto')
-      assert.equals('', Config.get_connect_arg())
-    end)
-
-    it('should return connect arg for specific port', function()
-      Config.set_port('/dev/ttyUSB0')
-      assert.equals('connect /dev/ttyUSB0', Config.get_connect_arg())
-    end)
-
-    it('should report port as configured when set', function()
-      Config.set_port('/dev/ttyACM0')
-      assert.is_true(Config.is_port_configured())
-    end)
-
-    it('should report port as configured for auto', function()
-      Config.set_port('auto')
-      assert.is_true(Config.is_port_configured())
-    end)
-  end)
-
-  describe('utils', function()
-    it('should return correct config path', function()
-      local path = Utils.get_config_path()
-      assert.is_true(path:match('%.micropython$') ~= nil)
-    end)
-
-    it('should return correct ampy path for backwards compatibility', function()
-      local path = Utils.get_ampy_path()
-      assert.is_true(path:match('%.ampy$') ~= nil)
-    end)
-  end)
-
-  describe('run', function()
-    local Run = require('micropython_nvim.run')
-
-    it('should have default ignore list', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.git'])
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.micropython'])
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['__pycache__'])
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['pyproject.toml'])
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['uv.lock'])
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.venv'])
-    end)
-
-    it('should include .ampy in ignore list for backwards compat', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.ampy'])
-    end)
+    M = require('micropython_nvim')
   end)
 
   describe('setup', function()
-    local Setup = require('micropython_nvim.setup')
-
-    it('should have baud rate options', function()
-      assert.is_true(#Setup.BAUD_RATES > 0)
-      assert.is_true(vim.tbl_contains(Setup.BAUD_RATES, '115200'))
+    it('should be a function', function()
+      assert.is_function(M.setup)
     end)
 
-    it('should have stub options', function()
-      assert.is_true(#Setup.STUB_OPTIONS > 0)
+    it('should configure the plugin', function()
+      M.setup({ port = '/dev/ttyUSB0', baud = 9600 })
+
+      helpers.reset_modules()
+      Config = require('micropython_nvim.config')
+
+      assert.equals('/dev/ttyUSB0', Config.get_port())
+      assert.equals('9600', Config.get_baud())
     end)
   end)
 
-  describe('project', function()
-    local Project = require('micropython_nvim.project')
-
-    it('should have templates', function()
-      assert.is_not_nil(Project.TEMPLATES.micropython_config)
-      assert.is_not_nil(Project.TEMPLATES.main)
-      assert.is_not_nil(Project.TEMPLATES.gitignore)
-      assert.is_not_nil(Project.TEMPLATES.pyright_config)
+  describe('statusline', function()
+    it('should be a function', function()
+      assert.is_function(M.statusline)
     end)
 
-    it('should have board options', function()
-      assert.is_true(#Project.BOARDS > 0)
+    it('should return auto format for auto port', function()
+      Config.set_port('auto')
+      assert.equals(' auto', M.statusline())
     end)
 
-    it('should have rp2 as default board', function()
-      assert.equals('rp2', Project.DEFAULT_BOARD)
+    it('should return port and baud for specific port', function()
+      Config.set_port('/dev/ttyUSB0')
+      Config.set_baud('9600')
+      assert.equals(' P:/dev/ttyUSB0 BR:9600', M.statusline())
     end)
 
-    it('should have correct stub packages for boards', function()
-      for _, board in ipairs(Project.BOARDS) do
-        assert.is_not_nil(board.stub)
-        assert.is_true(board.stub:match('micropython%-.*%-stubs') ~= nil)
-      end
+    it('should include microchip icon', function()
+      local result = M.statusline()
+      assert.is_true(result:find('') ~= nil)
+    end)
+  end)
+
+  describe('exists', function()
+    it('should be a function', function()
+      assert.is_function(M.exists)
+    end)
+
+    it('should return boolean', function()
+      local result = M.exists()
+      assert.is_boolean(result)
+    end)
+  end)
+
+  describe('initialise (deprecated)', function()
+    it('should be a function', function()
+      assert.is_function(M.initialise)
+    end)
+
+    it('should show deprecation warning', function()
+      local notifications, restore = helpers.mock_vim_notify()
+
+      M.initialise()
+
+      restore()
+      assert.is_true(#notifications > 0)
+      assert.is_true(notifications[1].msg:find('deprecated') ~= nil)
+      assert.equals(vim.log.levels.WARN, notifications[1].level)
+    end)
+  end)
+
+  describe('public API functions exist', function()
+    it('should have run', function()
+      assert.is_function(M.run)
+    end)
+
+    it('should have repl', function()
+      assert.is_function(M.repl)
+    end)
+
+    it('should have upload_current', function()
+      assert.is_function(M.upload_current)
+    end)
+
+    it('should have upload_all', function()
+      assert.is_function(M.upload_all)
+    end)
+
+    it('should have set_baud_rate', function()
+      assert.is_function(M.set_baud_rate)
+    end)
+
+    it('should have set_port', function()
+      assert.is_function(M.set_port)
+    end)
+
+    it('should have set_stubs', function()
+      assert.is_function(M.set_stubs)
+    end)
+
+    it('should have erase_all', function()
+      assert.is_function(M.erase_all)
+    end)
+
+    it('should have erase_one', function()
+      assert.is_function(M.erase_one)
+    end)
+
+    it('should have init', function()
+      assert.is_function(M.init)
+    end)
+
+    it('should have install', function()
+      assert.is_function(M.install)
+    end)
+
+    it('should have sync', function()
+      assert.is_function(M.sync)
+    end)
+
+    it('should have soft_reset', function()
+      assert.is_function(M.soft_reset)
+    end)
+
+    it('should have hard_reset', function()
+      assert.is_function(M.hard_reset)
+    end)
+
+    it('should have list_devices', function()
+      assert.is_function(M.list_devices)
+    end)
+
+    it('should have list_files', function()
+      assert.is_function(M.list_files)
+    end)
+
+    it('should have run_main', function()
+      assert.is_function(M.run_main)
     end)
   end)
 end)
