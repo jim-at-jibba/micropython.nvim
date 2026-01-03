@@ -276,8 +276,7 @@ function M.list_files()
     return
   end
 
-  local command =
-    string.format('%stree :; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
+  local command = string.format('%stree :; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
   Snacks.terminal(command)
 end
 
