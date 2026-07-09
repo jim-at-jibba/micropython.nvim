@@ -138,6 +138,57 @@ describe('micropython_nvim.run', function()
       assert.is_true(#notifications > 0)
       assert.is_true(notifications[1].msg:find('No port configured') ~= nil)
     end)
+
+    it('should create parent directories for nested files before copying', function()
+      helpers.with_temp_dir(function(tmpdir)
+        local nested_dir = tmpdir .. '/web/resources/templates'
+        local nested_file = nested_dir .. '/info.html'
+        local command = nil
+
+        vim.fn.mkdir(nested_dir, 'p')
+
+        local file = io.open(nested_file, 'w')
+        assert.is_not_nil(file)
+        file:write('<h1>info</h1>')
+        file:close()
+
+        local restore = helpers.mock_vim_fn({
+          executable = function()
+            return 0
+          end,
+          filereadable = function()
+            return 0
+          end,
+          getcwd = function()
+            return tmpdir
+          end,
+          jobstart = function(cmd)
+            command = cmd
+            return 1
+          end,
+        })
+
+        Run.upload_all()
+
+        restore()
+
+        assert.is_not_nil(command)
+        assert.is_true(
+          command:find(
+            'fs mkdir :web + fs mkdir :web/resources + fs mkdir :web/resources/templates',
+            1,
+            true
+          ) ~= nil
+        )
+        assert.is_true(
+          command:find(
+            string.format('cp "%s" :web/resources/templates/info.html', nested_file),
+            1,
+            true
+          ) ~= nil
+        )
+      end)
+    end)
   end)
 
   describe('sync', function()

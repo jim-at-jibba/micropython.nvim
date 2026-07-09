@@ -138,6 +138,22 @@ local function _collect_files_recursive(directory, ignore_list, base_path)
   return files
 end
 
+---@param path string
+---@param dirs_created table<string, boolean>
+---@param mpremote_commands string[]
+local function _add_parent_directories(path, dirs_created, mpremote_commands)
+  local current_dir = nil
+
+  for segment in string.gmatch(path, '[^/]+') do
+    current_dir = current_dir and (current_dir .. '/' .. segment) or segment
+
+    if not dirs_created[current_dir] then
+      table.insert(mpremote_commands, string.format('fs mkdir :%s', current_dir))
+      dirs_created[current_dir] = true
+    end
+  end
+end
+
 function M.run()
   if not _check_port_configured() then
     return
@@ -193,8 +209,7 @@ function M.upload_all(opts)
   for _, file_info in ipairs(files) do
     local dir = vim.fs.dirname(file_info.relative)
     if dir and dir ~= '.' and not dirs_created[dir] then
-      table.insert(mpremote_commands, string.format('fs mkdir :%s', dir))
-      dirs_created[dir] = true
+      _add_parent_directories(dir, dirs_created, mpremote_commands)
     end
     table.insert(
       mpremote_commands,
