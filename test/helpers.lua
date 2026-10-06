@@ -9,6 +9,7 @@ function M.reset_modules()
   package.loaded['micropython_nvim.project'] = nil
   package.loaded['micropython_nvim.repl'] = nil
   package.loaded['micropython_nvim.ui'] = nil
+  package.loaded['micropython_nvim.mpremote'] = nil
 end
 
 function M.mock_vim_fn(overrides)

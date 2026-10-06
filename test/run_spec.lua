@@ -230,4 +230,111 @@ describe('micropython_nvim.run', function()
       assert.is_true(notifications[1].msg:find('No port configured') ~= nil)
     end)
   end)
+
+  describe('device commands', function()
+    local calls
+    local restore_fn
+    local restore_notify
+    local restore_snacks
+    local terminal_commands
+
+    before_each(function()
+      calls = {}
+      terminal_commands = {}
+      Config.set_port('/dev/ttyUSB0')
+      restore_fn = helpers.mock_vim_fn({
+        jobstart = function(argv, opts)
+          table.insert(calls, { argv = argv, opts = opts })
+          return #calls
+        end,
+      })
+      restore_notify = select(2, helpers.mock_vim_notify())
+      restore_snacks = helpers.stub_snacks()
+      Snacks.terminal = function(cmd)
+        table.insert(terminal_commands, cmd)
+      end
+    end)
+
+    after_each(function()
+      restore_fn()
+      restore_notify()
+      restore_snacks()
+    end)
+
+    ---@param call table
+    ---@param n integer
+    ---@return string[]
+    local function tail(call, n)
+      return vim.list_slice(call.argv, #call.argv - n + 1)
+    end
+
+    it('upload_current should copy the buffer as one argv entry', function()
+      vim.api.nvim_buf_set_name(0, '/tmp/my "odd" $dir/main.py')
+      local path = vim.api.nvim_buf_get_name(0)
+      Run.upload_current()
+      assert.same({ 'connect', '/dev/ttyUSB0', 'cp', path, ':main.py' }, tail(calls[1], 5))
+    end)
+
+    it('soft_reset should run soft_reset in the background', function()
+      Run.soft_reset()
+      assert.same({ 'soft_reset' }, tail(calls[1], 1))
+    end)
+
+    it('hard_reset should run reset in the background', function()
+      Run.hard_reset()
+      assert.same({ 'reset' }, tail(calls[1], 1))
+    end)
+
+    it('upload_all should chain mkdir and cp with +', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.mkdir(dir .. '/lib', 'p')
+        vim.fn.writefile({ '' }, dir .. '/lib/a b.py')
+        local restore_cwd = helpers.mock_vim_fn({
+          getcwd = function()
+            return dir
+          end,
+          jobstart = function(argv, opts)
+            table.insert(calls, { argv = argv, opts = opts })
+            return #calls
+          end,
+        })
+        Run.upload_all()
+        restore_cwd()
+        assert.same(
+          { 'fs', 'mkdir', ':lib', '+', 'cp', dir .. '/lib/a b.py', ':lib/a b.py' },
+          tail(calls[1], 7)
+        )
+      end)
+    end)
+
+    it('erase_one should list device files without blocking', function()
+      local chosen
+      package.loaded['micropython_nvim.ui'] = {
+        select = function(items, _, cb)
+          chosen = items
+          cb(nil)
+        end,
+      }
+      Run = (function()
+        package.loaded['micropython_nvim.run'] = nil
+        return require('micropython_nvim.run')
+      end)()
+
+      Run.erase_one()
+      assert.same({ 'fs', 'ls', ':' }, tail(calls[1], 3))
+      assert.is_nil(chosen)
+
+      calls[1].opts.on_stdout(1, { 'ls :', '         139 main.py', '           0 lib/', '' })
+      calls[1].opts.on_stderr(1, { '' })
+      calls[1].opts.on_exit(1, 0)
+      assert.same({ 'main.py', 'lib/' }, chosen)
+    end)
+
+    it('run should escape the file path for the terminal', function()
+      vim.api.nvim_buf_set_name(0, "/tmp/it's here.py")
+      Run.run()
+      local path = vim.api.nvim_buf_get_name(0)
+      assert.is_truthy(terminal_commands[1]:find(vim.fn.shellescape(path), 1, true))
+    end)
+  end)
 end)

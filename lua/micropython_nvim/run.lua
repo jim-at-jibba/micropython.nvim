@@ -1,5 +1,6 @@
 local Config = require('micropython_nvim.config')
 local Utils = require('micropython_nvim.utils')
+local Mpremote = require('micropython_nvim.mpremote')
 local UI = require('micropython_nvim.ui')
 
 local M = {}
@@ -27,37 +28,6 @@ M.DEFAULT_IGNORE_LIST = {
   ['LICENSE'] = true,
 }
 
----@param command string
----@param command_name string
-local function _async_job(command, command_name)
-  local job_id = vim.fn.jobstart(command, {
-    on_exit = function(_, exit_status, _)
-      if exit_status == 0 then
-        vim.notify(
-          command_name .. ' completed successfully',
-          vim.log.levels.INFO,
-          { title = 'micropython.nvim' }
-        )
-      else
-        Utils.debug_print('Job failed with exit status: ' .. exit_status)
-        vim.notify(command_name .. ' failed', vim.log.levels.ERROR, { title = 'micropython.nvim' })
-      end
-    end,
-  })
-
-  if job_id == 0 then
-    vim.notify(
-      'Failed to run command job: ' .. command_name,
-      vim.log.levels.ERROR,
-      { title = 'micropython.nvim' }
-    )
-  elseif job_id == -1 then
-    vim.notify('Command not executable', vim.log.levels.ERROR, { title = 'micropython.nvim' })
-  else
-    vim.notify(command_name .. ' started', vim.log.levels.INFO, { title = 'micropython.nvim' })
-  end
-end
-
 ---@return boolean
 local function _check_port_configured()
   if not Config.is_port_configured() then
@@ -71,31 +41,35 @@ local function _check_port_configured()
   return true
 end
 
----@return string[]
-local function _get_device_files()
-  local files = {}
-  local command = Utils.get_mpremote_base() .. 'fs ls :'
-
-  local ok, pfile = pcall(io.popen, command .. ' 2>/dev/null')
-  if not ok or not pfile then
-    vim.notify('Failed to list device files', vim.log.levels.ERROR, { title = 'micropython.nvim' })
-    return files
-  end
-
-  for line in pfile:lines() do
-    local filename = line:match('^%s*%d+%s+(.+)$')
-    if filename then
-      table.insert(files, filename)
-    else
-      local dirname = line:match('^%s*(.+)/$')
-      if dirname then
-        table.insert(files, dirname .. '/')
+---@param on_files fun(files: string[])
+local function _get_device_files(on_files)
+  Mpremote.run({ 'fs', 'ls', ':' }, {
+    on_exit = function(result)
+      if result.code ~= 0 then
+        local output = result.stderr ~= '' and result.stderr or result.stdout
+        vim.notify(
+          'Failed to list device files:\n' .. output,
+          vim.log.levels.ERROR,
+          { title = 'micropython.nvim' }
+        )
+        return
       end
-    end
-  end
-  pfile:close()
 
-  return files
+      local files = {}
+      for line in vim.gsplit(result.stdout, '\n') do
+        local filename = line:match('^%s*%d+%s+(.+)$')
+        if filename then
+          table.insert(files, filename)
+        else
+          local dirname = line:match('^%s*(.+)/$')
+          if dirname then
+            table.insert(files, dirname .. '/')
+          end
+        end
+      end
+      on_files(files)
+    end,
+  })
 end
 
 ---@param directory string
@@ -144,8 +118,7 @@ function M.run()
   end
 
   local file_path = vim.api.nvim_buf_get_name(0)
-  local command =
-    string.format('%srun "%s"; %s', Utils.get_mpremote_base(), file_path, Utils.PRESS_ENTER_PROMPT)
+  local command = Mpremote.command({ 'run', file_path }) .. '; ' .. Utils.PRESS_ENTER_PROMPT
   Snacks.terminal(command)
 end
 
@@ -156,9 +129,7 @@ function M.upload_current()
 
   local file_path = vim.api.nvim_buf_get_name(0)
   local filename = vim.fs.basename(file_path)
-  local command = string.format('%scp "%s" :%s', Utils.get_mpremote_base(), file_path, filename)
-
-  _async_job(command, 'Upload ' .. filename)
+  Mpremote.run({ 'cp', file_path, ':' .. filename }, { name = 'Upload ' .. filename })
 end
 
 ---@class MicroPython.UploadAllOptions
@@ -188,23 +159,24 @@ function M.upload_all(opts)
   end
 
   local dirs_created = {}
-  local mpremote_commands = {}
+  local args = {}
 
   for _, file_info in ipairs(files) do
     local dir = vim.fs.dirname(file_info.relative)
     if dir and dir ~= '.' and not dirs_created[dir] then
-      table.insert(mpremote_commands, string.format('fs mkdir :%s', dir))
+      if #args > 0 then
+        table.insert(args, '+')
+      end
+      vim.list_extend(args, { 'fs', 'mkdir', ':' .. dir })
       dirs_created[dir] = true
     end
-    table.insert(
-      mpremote_commands,
-      string.format('cp "%s" :%s', file_info.full, file_info.relative)
-    )
+    if #args > 0 then
+      table.insert(args, '+')
+    end
+    vim.list_extend(args, { 'cp', file_info.full, ':' .. file_info.relative })
   end
 
-  local command = Utils.get_mpremote_base() .. table.concat(mpremote_commands, ' + ')
-  Utils.debug_print('Upload command: ' .. command)
-  _async_job(command, 'Upload all (' .. #files .. ' files)')
+  Mpremote.run(args, { name = 'Upload all (' .. #files .. ' files)' })
 end
 
 function M.sync()
@@ -213,7 +185,7 @@ function M.sync()
   end
 
   local directory = Utils.get_cwd()
-  local command = string.format('%smount %s', Utils.get_mpremote_base(), directory)
+  local command = Mpremote.command({ 'mount', directory })
   Snacks.terminal(command)
 end
 
@@ -222,8 +194,7 @@ function M.soft_reset()
     return
   end
 
-  local command = Utils.get_mpremote_base() .. 'soft_reset'
-  _async_job(command, 'Soft reset')
+  Mpremote.run({ 'soft_reset' }, { name = 'Soft reset' })
 end
 
 function M.hard_reset()
@@ -231,8 +202,7 @@ function M.hard_reset()
     return
   end
 
-  local command = Utils.get_mpremote_base() .. 'reset'
-  _async_job(command, 'Hard reset')
+  Mpremote.run({ 'reset' }, { name = 'Hard reset' })
 end
 
 function M.erase_all()
@@ -240,8 +210,9 @@ function M.erase_all()
     return
   end
 
-  local command =
-    string.format('%sfs rm -r : 2>&1; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
+  local command = Mpremote.command({ 'fs', 'rm', '-r', ':' })
+    .. ' 2>&1; '
+    .. Utils.PRESS_ENTER_PROMPT
   Snacks.terminal(command)
 end
 
@@ -250,24 +221,23 @@ function M.erase_one()
     return
   end
 
-  local files = _get_device_files()
-
-  if #files == 0 then
-    vim.notify('No files found on device', vim.log.levels.WARN, { title = 'micropython.nvim' })
-    return
-  end
-
-  UI.select(files, {
-    prompt = 'Select a file on device to delete:',
-  }, function(choice)
-    if not choice then
+  _get_device_files(function(files)
+    if #files == 0 then
+      vim.notify('No files found on device', vim.log.levels.WARN, { title = 'micropython.nvim' })
       return
     end
 
-    local is_dir = choice:match('/$')
-    local cmd_type = is_dir and 'fs rm -r' or 'fs rm'
-    local command = string.format('%s%s :%s', Utils.get_mpremote_base(), cmd_type, choice)
-    _async_job(command, 'Delete ' .. choice)
+    UI.select(files, {
+      prompt = 'Select a file on device to delete:',
+    }, function(choice)
+      if not choice then
+        return
+      end
+
+      local is_dir = choice:match('/$')
+      local args = is_dir and { 'fs', 'rm', '-r', ':' .. choice } or { 'fs', 'rm', ':' .. choice }
+      Mpremote.run(args, { name = 'Delete ' .. choice })
+    end)
   end)
 end
 
@@ -276,7 +246,7 @@ function M.list_files()
     return
   end
 
-  local command = string.format('%stree :; %s', Utils.get_mpremote_base(), Utils.PRESS_ENTER_PROMPT)
+  local command = Mpremote.command({ 'tree', ':' }) .. '; ' .. Utils.PRESS_ENTER_PROMPT
   Snacks.terminal(command)
 end
 
@@ -285,11 +255,9 @@ function M.run_main()
     return
   end
 
-  local command = string.format(
-    '%sexec "exec(open(\'main.py\').read())"; %s',
-    Utils.get_mpremote_base(),
-    Utils.PRESS_ENTER_PROMPT
-  )
+  local command = Mpremote.command({ 'exec', "exec(open('main.py').read())" })
+    .. '; '
+    .. Utils.PRESS_ENTER_PROMPT
   Snacks.terminal(command)
 end
 

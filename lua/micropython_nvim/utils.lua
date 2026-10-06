@@ -112,7 +112,7 @@ end
 function M.read_config()
   local config_path = M.get_config_path()
   local ampy_path = M.get_ampy_path()
-  local path_to_use = nil
+  local path_to_use
   local is_legacy = false
 
   if M.config_exists() then

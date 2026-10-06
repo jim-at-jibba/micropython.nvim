@@ -1,5 +1,5 @@
 local Config = require('micropython_nvim.config')
-local Utils = require('micropython_nvim.utils')
+local Mpremote = require('micropython_nvim.mpremote')
 
 local M = {}
 
@@ -13,7 +13,7 @@ function M.open()
     return
   end
 
-  local repl_command = Utils.get_mpremote_base() .. 'repl'
+  local repl_command = Mpremote.command({ 'repl' })
   Snacks.terminal(repl_command)
 end
 

@@ -1,5 +1,6 @@
 local Config = require('micropython_nvim.config')
 local Utils = require('micropython_nvim.utils')
+local Mpremote = require('micropython_nvim.mpremote')
 local UI = require('micropython_nvim.ui')
 
 local M = {}
@@ -30,91 +31,83 @@ M.STUB_OPTIONS = {
   'micropython-webassembly-stubs',
 }
 
----@return string[]
-local function _get_ports_list()
-  local ports = {}
+---@class MicroPython.Device
+---@field port string
+---@field serial string
+---@field manufacturer string
 
-  local ok, pfile = pcall(io.popen, 'mpremote connect list 2>/dev/null')
-  if ok and pfile then
-    for line in pfile:lines() do
-      local port = line:match('^(%S+)%s')
-      if port then
-        table.insert(ports, port)
+---@param on_devices fun(devices: MicroPython.Device[])
+function M.list_devices(on_devices)
+  Mpremote.run({ 'connect', 'list' }, {
+    connect = false,
+    on_exit = function(result)
+      local devices = {}
+      if result.code == 0 then
+        for line in vim.gsplit(result.stdout, '\n') do
+          local port, serial, manufacturer = line:match('^(%S+)%s+(%S+)%s+(.+)$')
+          if port then
+            table.insert(devices, {
+              port = port,
+              serial = serial,
+              manufacturer = manufacturer,
+            })
+          end
+        end
+      else
+        Utils.debug_print('mpremote connect list failed: ' .. result.stderr)
       end
-    end
-    pfile:close()
-  end
-
-  if #ports > 0 then
-    table.insert(ports, 1, 'auto')
-    return ports
-  end
-
-  local patterns = {
-    '/dev/ttyUSB*',
-    '/dev/ttyACM*',
-    '/dev/ttyS*',
-    '/dev/tty.usbmodem*',
-    '/dev/cu.usbmodem*',
-  }
-
-  for _, pattern in ipairs(patterns) do
-    local ok2, pfile2 = pcall(io.popen, 'ls ' .. pattern .. ' 2>/dev/null')
-    if ok2 and pfile2 then
-      for filename in pfile2:lines() do
-        table.insert(ports, filename)
-      end
-      pfile2:close()
-    end
-  end
-
-  table.insert(ports, 1, 'auto')
-  Utils.debug_print('ports: ' .. vim.inspect(ports))
-  return ports
+      on_devices(devices)
+    end,
+  })
 end
 
----@return table<string, string>[]
-function M.list_devices()
-  local devices = {}
-  local ok, pfile = pcall(io.popen, 'mpremote connect list 2>/dev/null')
-
-  if not ok or not pfile then
-    vim.notify('Failed to list devices', vim.log.levels.ERROR, { title = 'micropython.nvim' })
-    return devices
-  end
-
-  for line in pfile:lines() do
-    local port, serial, manufacturer = line:match('^(%S+)%s+(%S+)%s+(.+)$')
-    if port then
-      table.insert(devices, {
-        port = port,
-        serial = serial,
-        manufacturer = manufacturer,
-      })
+---@param on_ports fun(ports: string[])
+local function _get_ports_list(on_ports)
+  M.list_devices(function(devices)
+    local ports = { 'auto' }
+    for _, device in ipairs(devices) do
+      table.insert(ports, device.port)
     end
-  end
-  pfile:close()
 
-  return devices
+    if #devices == 0 then
+      local patterns = {
+        '/dev/ttyUSB*',
+        '/dev/ttyACM*',
+        '/dev/ttyS*',
+        '/dev/tty.usbmodem*',
+        '/dev/cu.usbmodem*',
+      }
+      for _, pattern in ipairs(patterns) do
+        vim.list_extend(ports, vim.fn.glob(pattern, false, true))
+      end
+    end
+
+    Utils.debug_print('ports: ' .. vim.inspect(ports))
+    on_ports(ports)
+  end)
 end
 
 function M.show_devices()
-  local devices = M.list_devices()
+  M.list_devices(function(devices)
+    if #devices == 0 then
+      vim.notify(
+        'No MicroPython devices found',
+        vim.log.levels.WARN,
+        { title = 'micropython.nvim' }
+      )
+      return
+    end
 
-  if #devices == 0 then
-    vim.notify('No MicroPython devices found', vim.log.levels.WARN, { title = 'micropython.nvim' })
-    return
-  end
+    local lines = { 'Available MicroPython devices:', '' }
+    for _, device in ipairs(devices) do
+      table.insert(
+        lines,
+        string.format('  %s (%s) - %s', device.port, device.serial, device.manufacturer)
+      )
+    end
 
-  local lines = { 'Available MicroPython devices:', '' }
-  for _, device in ipairs(devices) do
-    table.insert(
-      lines,
-      string.format('  %s (%s) - %s', device.port, device.serial, device.manufacturer)
-    )
-  end
-
-  vim.notify(table.concat(lines, '\n'), vim.log.levels.INFO, { title = 'micropython.nvim' })
+    vim.notify(table.concat(lines, '\n'), vim.log.levels.INFO, { title = 'micropython.nvim' })
+  end)
 end
 
 function M.set_baud_rate()
@@ -162,45 +155,40 @@ function M.set_baud_rate()
 end
 
 function M.set_port()
-  local ports = _get_ports_list()
-
-  if #ports == 0 then
-    vim.notify('No serial ports found', vim.log.levels.WARN, { title = 'micropython.nvim' })
-    return
-  end
-
-  UI.select(ports, {
-    prompt = 'Select a port:',
-  }, function(choice)
-    if not choice then
-      return
-    end
-
-    Config.set_port(choice)
-
-    local config_path = Utils.get_config_path()
-    if Utils.config_exists() then
-      local result = Utils.replace_line(config_path, 'PORT', 'PORT=' .. choice)
-      if result then
-        vim.notify('Port set to: ' .. choice, vim.log.levels.INFO, { title = 'micropython.nvim' })
-      else
-        vim.notify('Failed to set port', vim.log.levels.ERROR, { title = 'micropython.nvim' })
+  _get_ports_list(function(ports)
+    UI.select(ports, {
+      prompt = 'Select a port:',
+    }, function(choice)
+      if not choice then
+        return
       end
-    elseif Utils.ampy_config_exists() then
-      local ampy_path = Utils.get_ampy_path()
-      local result = Utils.replace_line(ampy_path, 'AMPY_PORT', 'AMPY_PORT=' .. choice)
-      if result then
-        vim.notify('Port set to: ' .. choice, vim.log.levels.INFO, { title = 'micropython.nvim' })
+
+      Config.set_port(choice)
+
+      local config_path = Utils.get_config_path()
+      if Utils.config_exists() then
+        local result = Utils.replace_line(config_path, 'PORT', 'PORT=' .. choice)
+        if result then
+          vim.notify('Port set to: ' .. choice, vim.log.levels.INFO, { title = 'micropython.nvim' })
+        else
+          vim.notify('Failed to set port', vim.log.levels.ERROR, { title = 'micropython.nvim' })
+        end
+      elseif Utils.ampy_config_exists() then
+        local ampy_path = Utils.get_ampy_path()
+        local result = Utils.replace_line(ampy_path, 'AMPY_PORT', 'AMPY_PORT=' .. choice)
+        if result then
+          vim.notify('Port set to: ' .. choice, vim.log.levels.INFO, { title = 'micropython.nvim' })
+        else
+          vim.notify('Failed to set port', vim.log.levels.ERROR, { title = 'micropython.nvim' })
+        end
       else
-        vim.notify('Failed to set port', vim.log.levels.ERROR, { title = 'micropython.nvim' })
+        vim.notify(
+          'No config file found. Run :MPInit first.',
+          vim.log.levels.WARN,
+          { title = 'micropython.nvim' }
+        )
       end
-    else
-      vim.notify(
-        'No config file found. Run :MPInit first.',
-        vim.log.levels.WARN,
-        { title = 'micropython.nvim' }
-      )
-    end
+    end)
   end)
 end
 
@@ -213,7 +201,7 @@ function M.set_stubs()
     end
 
     local cwd = Utils.get_cwd()
-    local result = false
+    local result
 
     if Utils.pyproject_exists() then
       local pyproject_path = cwd .. '/pyproject.toml'
