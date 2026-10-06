@@ -36,12 +36,13 @@ M.STUB_OPTIONS = {
 ---@field serial string
 ---@field manufacturer string
 
----@param on_devices fun(devices: MicroPython.Device[])
+---@param on_devices fun(devices: MicroPython.Device[], err?: string)
 function M.list_devices(on_devices)
   Mpremote.run({ 'connect', 'list' }, {
     connect = false,
     on_exit = function(result)
       local devices = {}
+      local err
       if result.code == 0 then
         for line in vim.gsplit(result.stdout, '\n') do
           local port, serial, manufacturer = line:match('^(%S+)%s+(%S+)%s+(.+)$')
@@ -54,9 +55,9 @@ function M.list_devices(on_devices)
           end
         end
       else
-        Utils.debug_print('mpremote connect list failed: ' .. result.stderr)
+        err = Mpremote.error_output(result)
       end
-      on_devices(devices)
+      on_devices(devices, err)
     end,
   })
 end
@@ -88,7 +89,16 @@ local function _get_ports_list(on_ports)
 end
 
 function M.show_devices()
-  M.list_devices(function(devices)
+  M.list_devices(function(devices, err)
+    if err then
+      vim.notify(
+        'Failed to list devices:\n' .. err,
+        vim.log.levels.ERROR,
+        { title = 'micropython.nvim' }
+      )
+      return
+    end
+
     if #devices == 0 then
       vim.notify(
         'No MicroPython devices found',

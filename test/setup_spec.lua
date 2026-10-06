@@ -145,6 +145,19 @@ describe('micropython_nvim.setup', function()
       assert.same({}, devices)
     end)
 
+    it('show_devices should show the mpremote error when listing fails', function()
+      local notifications, restore_notify = helpers.mock_vim_notify()
+      Setup.show_devices()
+      calls[1].opts.on_stdout(1, { '' })
+      calls[1].opts.on_stderr(1, { 'error: Failed to spawn: `mpremote`', '' })
+      calls[1].opts.on_exit(1, 2)
+      restore_notify()
+
+      local last = notifications[#notifications]
+      assert.equals(vim.log.levels.ERROR, last.level)
+      assert.equals('Failed to list devices:\nerror: Failed to spawn: `mpremote`', last.msg)
+    end)
+
     it('set_port should offer auto plus the listed ports after mpremote answers', function()
       local offered
       package.loaded['micropython_nvim.ui'] = {

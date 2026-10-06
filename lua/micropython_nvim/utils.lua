@@ -27,13 +27,13 @@ function M.pyproject_exists()
 end
 
 ---@return boolean
-local function _is_uv_project()
+function M.is_uv_project()
   return M.uv_available() and M.pyproject_exists()
 end
 
 ---@return boolean
 function M.mpremote_install_check()
-  local is_uv = M.uv_available() and M.pyproject_exists()
+  local is_uv = M.is_uv_project()
   local cmd = is_uv and 'uv run mpremote --version 2>/dev/null' or 'mpremote --version 2>/dev/null'
 
   local ok, handle = pcall(io.popen, cmd)
@@ -239,9 +239,10 @@ function M.replace_line(file_path, needle, replacement)
   return true
 end
 
+---@deprecated Use require('micropython_nvim.mpremote').command() instead
 ---@return string
 function M.get_mpremote_base()
-  local base = _is_uv_project() and 'uv run mpremote ' or 'mpremote '
+  local base = M.is_uv_project() and 'uv run mpremote ' or 'mpremote '
   local connect_arg = Config.get_connect_arg()
   if connect_arg ~= '' then
     return base .. connect_arg .. ' '

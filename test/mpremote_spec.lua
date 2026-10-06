@@ -77,6 +77,13 @@ describe('micropython_nvim.mpremote', function()
     end)
   end)
 
+  describe('error_output', function()
+    it('should prefer stderr, then stdout', function()
+      assert.equals('e', Mpremote.error_output({ code = 1, stdout = 'o', stderr = 'e' }))
+      assert.equals('o', Mpremote.error_output({ code = 1, stdout = 'o', stderr = '' }))
+    end)
+  end)
+
   describe('command', function()
     it('should shell-escape every argument', function()
       Config.set_port('/dev/ttyUSB0')
@@ -210,6 +217,26 @@ describe('micropython_nvim.mpremote', function()
       assert.equals(-1, result.code)
       assert.equals(vim.log.levels.ERROR, notifications[1].level)
       assert.is_truthy(notifications[1].msg:find('mpremote not found', 1, true))
+    end)
+
+    it('should suggest uv sync when uv cannot be started', function()
+      local restore = helpers.mock_vim_fn({
+        jobstart = function()
+          return -1
+        end,
+        executable = function()
+          return 1
+        end,
+        filereadable = function()
+          return 1
+        end,
+      })
+      local notifications, restore_notify = helpers.mock_vim_notify()
+      Mpremote.run({ 'reset' }, { name = 'Hard reset' })
+      restore()
+      restore_notify()
+
+      assert.is_truthy(notifications[1].msg:find('uv sync', 1, true))
     end)
   end)
 end)

@@ -46,9 +46,8 @@ local function _get_device_files(on_files)
   Mpremote.run({ 'fs', 'ls', ':' }, {
     on_exit = function(result)
       if result.code ~= 0 then
-        local output = result.stderr ~= '' and result.stderr or result.stdout
         vim.notify(
-          'Failed to list device files:\n' .. output,
+          'Failed to list device files:\n' .. Mpremote.error_output(result),
           vim.log.levels.ERROR,
           { title = 'micropython.nvim' }
         )
@@ -70,6 +69,16 @@ local function _get_device_files(on_files)
       on_files(files)
     end,
   })
+end
+
+---Append an mpremote command to a chain, joining commands with '+'
+---@param args string[]
+---@param command string[]
+local function _chain(args, command)
+  if #args > 0 then
+    table.insert(args, '+')
+  end
+  vim.list_extend(args, command)
 end
 
 ---@param directory string
@@ -164,16 +173,10 @@ function M.upload_all(opts)
   for _, file_info in ipairs(files) do
     local dir = vim.fs.dirname(file_info.relative)
     if dir and dir ~= '.' and not dirs_created[dir] then
-      if #args > 0 then
-        table.insert(args, '+')
-      end
-      vim.list_extend(args, { 'fs', 'mkdir', ':' .. dir })
+      _chain(args, { 'fs', 'mkdir', ':' .. dir })
       dirs_created[dir] = true
     end
-    if #args > 0 then
-      table.insert(args, '+')
-    end
-    vim.list_extend(args, { 'cp', file_info.full, ':' .. file_info.relative })
+    _chain(args, { 'cp', file_info.full, ':' .. file_info.relative })
   end
 
   Mpremote.run(args, { name = 'Upload all (' .. #files .. ' files)' })

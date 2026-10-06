@@ -27,6 +27,13 @@ local function _join(lines)
   return vim.trim(table.concat(lines, '\n'))
 end
 
+---The most useful error text from a result: stderr, falling back to stdout
+---@param result MicroPython.MpremoteResult
+---@return string
+function M.error_output(result)
+  return result.stderr ~= '' and result.stderr or result.stdout
+end
+
 ---@param name string
 ---@param result MicroPython.MpremoteResult
 local function _report(name, result)
@@ -35,7 +42,7 @@ local function _report(name, result)
     return
   end
 
-  local output = result.stderr ~= '' and result.stderr or result.stdout
+  local output = M.error_output(result)
   if output == '' then
     _notify(string.format('%s failed (exit code %d)', name, result.code), vim.log.levels.ERROR)
   else
@@ -49,8 +56,7 @@ end
 ---@return string[]
 function M.argv(args, opts)
   opts = opts or {}
-  local argv = (Utils.uv_available() and Utils.pyproject_exists()) and { 'uv', 'run', 'mpremote' }
-    or { 'mpremote' }
+  local argv = Utils.is_uv_project() and { 'uv', 'run', 'mpremote' } or { 'mpremote' }
 
   local port = Config.get_port()
   if opts.connect ~= false and port ~= 'auto' and port ~= '' then
@@ -99,8 +105,8 @@ function M.run(args, opts)
   })
 
   if not ok or job_id <= 0 then
-    local msg =
-      string.format('mpremote not found (%s). Install with: pip install mpremote', argv[1])
+    local hint = argv[1] == 'uv' and 'uv sync' or 'pip install mpremote'
+    local msg = string.format('mpremote not found (%s). Install with: %s', argv[1], hint)
     if opts.name then
       _notify(msg, vim.log.levels.ERROR)
     end
