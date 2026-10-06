@@ -19,7 +19,6 @@ describe('micropython_nvim', function()
     it('should configure the plugin', function()
       M.setup({ port = '/dev/ttyUSB0', baud = 9600 })
 
-      helpers.reset_modules()
       Config = require('micropython_nvim.config')
 
       assert.equals('/dev/ttyUSB0', Config.get_port())

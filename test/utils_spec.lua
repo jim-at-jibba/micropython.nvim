@@ -1,5 +1,4 @@
 local helpers = require('test.helpers')
-local fixtures = require('test.fixtures')
 
 describe('micropython_nvim.utils', function()
   local Utils
@@ -112,12 +111,12 @@ describe('micropython_nvim.utils', function()
     it('should not print when debug is disabled', function()
       Config.setup({ debug = false })
       local printed = false
-      local original_print = print
-      print = function()
+      local original_print = _G.print
+      _G.print = function()
         printed = true
       end
       Utils.debug_print('test message')
-      print = original_print
+      _G.print = original_print
       assert.is_false(printed)
     end)
 
@@ -129,12 +128,12 @@ describe('micropython_nvim.utils', function()
       Utils = require('micropython_nvim.utils')
 
       local printed = false
-      local original_print = print
-      print = function()
+      local original_print = _G.print
+      _G.print = function()
         printed = true
       end
       Utils.debug_print('test message')
-      print = original_print
+      _G.print = original_print
       assert.is_true(printed)
     end)
   end)
@@ -206,7 +205,7 @@ describe('micropython_nvim.utils', function()
     end)
 
     it('should return false for non-existent file', function()
-      local notifications, restore = helpers.mock_vim_notify()
+      local _, restore = helpers.mock_vim_notify()
       local result = Utils.replace_line('/nonexistent/file.txt', 'needle', 'replacement')
       restore()
 
