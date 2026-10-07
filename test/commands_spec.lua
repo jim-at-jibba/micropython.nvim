@@ -104,6 +104,8 @@ describe('micropython_nvim.commands', function()
         'send',
         'send_buffer',
         'interrupt',
+        'info',
+        'mip',
         'sync',
         'reset',
         'hard_reset',

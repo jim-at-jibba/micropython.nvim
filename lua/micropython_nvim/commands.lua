@@ -3,7 +3,7 @@ local M = {}
 ---@class MicroPython.Subcommand
 ---@field desc string Shown in the :MP picker and used for the legacy alias description
 ---@field impl fun(args: string[], range?: MicroPython.Range) Called with the arguments after the subcommand name
----@field complete? fun(arglead: string): string[] Completes the subcommand's own arguments
+---@field complete? fun(arglead: string, index: integer): string[] Completes argument `index` (1-based)
 ---@field range? boolean Accepts a line range, as in :'<,'>MP send
 
 ---@class MicroPython.Range
@@ -44,6 +44,19 @@ M.subcommands = {
   },
   send_buffer = { desc = 'Send the whole buffer to the REPL', impl = _facade('repl_send_buffer') },
   interrupt = { desc = 'Stop running code on the device', impl = _facade('repl_interrupt') },
+  info = {
+    desc = 'Show firmware, board, storage and clock of the device',
+    impl = _facade('info'),
+  },
+  mip = {
+    desc = 'Install a package on the device: mip <package> [target directory]',
+    impl = function(args)
+      require('micropython_nvim').mip(args)
+    end,
+    complete = function(arglead, index)
+      return require('micropython_nvim.device').mip_complete(arglead, index)
+    end,
+  },
   sync = { desc = 'Mount the project directory on the device', impl = _facade('sync') },
   reset = { desc = 'Soft reset the device', impl = _facade('soft_reset') },
   hard_reset = { desc = 'Hard reset the device', impl = _facade('hard_reset') },
@@ -153,7 +166,7 @@ function M.complete(arglead, cmdline, cursorpos)
 
   local subcommand = M.subcommands[words[2]]
   if subcommand and subcommand.complete then
-    return subcommand.complete(arglead)
+    return subcommand.complete(arglead, completed)
   end
   return {}
 end

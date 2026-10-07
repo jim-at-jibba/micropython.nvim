@@ -19,6 +19,7 @@ lua/
     health.lua         # :checkhealth micropython_nvim
     mpremote.lua       # Shared mpremote runner (argv, async jobs, terminal commands)
     run.lua            # Run code, reset, erase and list files on the device
+    device.lua         # Device info (firmware, board, storage, clock) and mip installs
     upload.lua         # Upload files (keeping project paths) and upload on save
     files.lua          # Device file browser and mp://<path> buffers
     setup.lua          # Configure port, baud, stubs
