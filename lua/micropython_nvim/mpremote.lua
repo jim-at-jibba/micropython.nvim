@@ -76,7 +76,7 @@ end
 ---@param opts? MicroPython.MpremoteOpts
 ---@return string
 function M.command(args, opts)
-  return table.concat(vim.tbl_map(vim.fn.shellescape, M.argv(args, opts)), ' ')
+  return Utils.shell_join(M.argv(args, opts))
 end
 
 ---The error for an mpremote argv that could not be started, with an install hint

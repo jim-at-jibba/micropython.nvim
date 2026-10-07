@@ -44,19 +44,39 @@ describe('micropython_nvim.flash', function()
     end)
   end)
 
-  describe('args', function()
+  describe('argv', function()
     it('should flash a version to a serial port', function()
       assert.same(
         { 'mpflash', 'flash', '--version', 'stable', '--serial', '/dev/ttyUSB0' },
-        Flash.args('stable', { serial = '/dev/ttyUSB0', detected = true })
+        Flash.argv({ 'mpflash' }, 'stable', { serial = '/dev/ttyUSB0', detected = true })
       )
     end)
 
     it('should let mpflash ask for the board when none was detected', function()
       assert.same(
-        { 'mpflash', 'flash', '--version', '1.24.1', '--board', '?' },
-        Flash.args('1.24.1', { detected = false })
+        { 'uv', 'run', 'mpflash', 'flash', '--version', '1.24.1', '--board', '?' },
+        Flash.argv({ 'uv', 'run', 'mpflash' }, '1.24.1', { detected = false })
       )
+    end)
+  end)
+
+  describe('mpflash', function()
+    it('should prefer mpflash on PATH, then the uv project venv', function()
+      helpers.with_temp_dir(function(dir)
+        local restore = helpers.mock_vim_fn({
+          getcwd = function()
+            return dir
+          end,
+          executable = function(name)
+            return (name == 'uv' or name == dir .. '/.venv/bin/mpflash') and 1 or 0
+          end,
+        })
+        assert.is_nil(Flash.mpflash())
+        vim.fn.writefile({ '[project]' }, dir .. '/pyproject.toml')
+        local found = Flash.mpflash()
+        restore()
+        assert.same({ 'uv', 'run', 'mpflash' }, found)
+      end)
     end)
   end)
 
@@ -218,7 +238,12 @@ describe('micropython_nvim.flash', function()
       assert.same({ 'detect', 'list' }, kinds())
 
       finish('detect', 0, PICO_W_OUTPUT)
-      finish('list', 0, '/dev/cu.usbmodem101 e6614c311b7e6f35 2e8a:0005 MicroPython Board')
+      finish(
+        'list',
+        0,
+        '/dev/cu.Bluetooth None 0000:0000 None None\n'
+          .. '/dev/cu.usbmodem101 e6614c311b7e6f35 2e8a:0005 MicroPython Board'
+      )
 
       assert.is_truthy(opened[1]:find("'--serial' '/dev/cu.usbmodem101'", 1, true))
     end)
@@ -246,6 +271,7 @@ describe('micropython_nvim.flash', function()
       local last = notifications[#notifications]
       assert.equals(vim.log.levels.ERROR, last.level)
       assert.is_truthy(last.msg:find(':MP set_port', 1, true))
+      assert.is_truthy(last.msg:find('BOOTSEL', 1, true))
     end)
 
     it('should close the REPL so mpflash can use the serial port', function()
@@ -260,6 +286,12 @@ describe('micropython_nvim.flash', function()
       }
       Flash.flash({ 'stable' })
       assert.is_true(closed)
+      assert.equals(0, #jobs)
+
+      vim.wait(2000, function()
+        return #jobs > 0
+      end)
+      assert.same({ 'detect' }, kinds())
     end)
   end)
 

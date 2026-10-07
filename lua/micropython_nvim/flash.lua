@@ -13,6 +13,9 @@ M.MAX_VERSIONS = 10
 -- Versions mpflash resolves itself: the latest release and the latest nightly build
 M.CHANNELS = { 'stable', 'preview' }
 
+-- How long to wait after closing the REPL before mpremote and mpflash open the port
+local REPL_RELEASE_MS = 500
+
 local RELEASES_REPO = 'https://github.com/micropython/micropython'
 
 ---@class MicroPython.FlashTarget
@@ -27,7 +30,7 @@ end
 
 ---@param version string
 ---@return integer[]
-local function _numbers(version)
+local function _version_parts(version)
   return vim.tbl_map(tonumber, vim.split(version, '.', { plain = true }))
 end
 
@@ -43,7 +46,7 @@ function M.parse_versions(output)
     end
   end
   table.sort(versions, function(a, b)
-    local x, y = _numbers(a), _numbers(b)
+    local x, y = _version_parts(a), _version_parts(b)
     for i = 1, 3 do
       if x[i] ~= y[i] then
         return x[i] > y[i]
@@ -54,12 +57,25 @@ function M.parse_versions(output)
   return vim.list_slice(versions, 1, M.MAX_VERSIONS)
 end
 
----mpflash arguments to flash a firmware version
+---The mpflash command: on PATH, else from the uv project's venv; nil if not installed
+---@return string[]?
+function M.mpflash()
+  if vim.fn.executable('mpflash') == 1 then
+    return { 'mpflash' }
+  end
+  if Utils.is_uv_project() and vim.fn.executable(Utils.get_cwd() .. '/.venv/bin/mpflash') == 1 then
+    return { 'uv', 'run', 'mpflash' }
+  end
+  return nil
+end
+
+---mpflash argv to flash a firmware version
+---@param mpflash string[] The mpflash command, from M.mpflash()
 ---@param version string 'stable', 'preview' or a release such as '1.24.1'
 ---@param target MicroPython.FlashTarget
 ---@return string[]
-function M.args(version, target)
-  local args = { 'mpflash', 'flash', '--version', version }
+function M.argv(mpflash, version, target)
+  local args = vim.list_extend(vim.deepcopy(mpflash), { 'flash', '--version', version })
   if target.serial then
     vim.list_extend(args, { '--serial', target.serial })
   end
@@ -94,7 +110,9 @@ local function _resolve_serial(on_serial)
     connect = false,
     on_exit = function(result)
       for _, device in ipairs(Mpremote.parse_device_list(result.stdout)) do
-        local matches = port == 'auto' and device.serial ~= 'None' or port == 'id:' .. device.serial
+        -- mpremote's auto picks the first port with a USB vid:pid, listed as 0000:0000 without one
+        local matches = port == 'auto' and not vim.startswith(device.manufacturer, '0000:0000')
+          or port == 'id:' .. device.serial
         if matches then
           on_serial(device.port)
           return
@@ -108,7 +126,12 @@ end
 ---@param on_versions fun(versions: string[])
 local function _fetch_versions(on_versions)
   Utils.run_job({ 'git', 'ls-remote', '--tags', '--refs', RELEASES_REPO }, {}, function(result)
-    on_versions(result.code == 0 and M.parse_versions(result.stdout) or {})
+    if result.code ~= 0 then
+      Utils.debug_print('fetching MicroPython releases failed: ' .. result.stderr)
+      on_versions({})
+      return
+    end
+    on_versions(M.parse_versions(result.stdout))
   end)
 end
 
@@ -123,35 +146,18 @@ local function _prompt(board)
   return string.format('Flash %s (now %s) with:', name, current)
 end
 
+---@param mpflash string[]
 ---@param version string
 ---@param target MicroPython.FlashTarget
-local function _run(version, target)
-  local command = table.concat(vim.tbl_map(vim.fn.shellescape, M.args(version, target)), ' ')
+local function _run(mpflash, version, target)
+  local command = Utils.shell_join(M.argv(mpflash, version, target))
   require('micropython_nvim.terminal').open(command .. ' 2>&1; ' .. Utils.PRESS_ENTER_PROMPT)
 end
 
----Flash MicroPython firmware with mpflash: `:MP flash [version]`, or pick a version
----@param args string[]
-function M.flash(args)
-  if #args > 1 then
-    _notify('Usage: :MP flash [stable|preview|<version>]', vim.log.levels.ERROR)
-    return
-  end
-  if vim.fn.executable('mpflash') ~= 1 then
-    _notify('mpflash not found. ' .. M.INSTALL_HINT, vim.log.levels.ERROR)
-    return
-  end
-  if not Utils.check_port_configured() then
-    return
-  end
-
-  -- The REPL holds the serial port, which mpflash needs
-  local Repl = require('micropython_nvim.repl')
-  if Repl.is_running() then
-    Repl.close()
-  end
-
-  local version = args[1]
+---Detect the board, resolve its serial port and pick a version, then flash
+---@param mpflash string[]
+---@param version? string
+local function _start(mpflash, version)
   local board, serial, versions
   local pending = version and 2 or 3
 
@@ -162,7 +168,9 @@ function M.flash(args)
     end
     if not serial then
       _notify(
-        'No connected device found to flash. Connect the board, or run :MP set_port',
+        'No connected device found to flash. Connect the board, or run :MP set_port. '
+          .. 'A board with no serial port (a Pico in BOOTSEL mode) can be flashed from a shell: '
+          .. 'mpflash flash --board <BOARD_ID>',
         vim.log.levels.ERROR
       )
       return
@@ -170,7 +178,7 @@ function M.flash(args)
 
     local target = { serial = serial, detected = board ~= nil }
     if version then
-      _run(version, target)
+      _run(mpflash, version, target)
       return
     end
     local items = vim.list_extend(vim.deepcopy(M.CHANNELS), versions)
@@ -178,7 +186,7 @@ function M.flash(args)
       if not choice then
         return
       end
-      _run(choice, target)
+      _run(mpflash, choice, target)
     end)
   end
 
@@ -197,6 +205,34 @@ function M.flash(args)
       done()
     end)
   end
+end
+
+---Flash MicroPython firmware with mpflash: `:MP flash [version]`, or pick a version
+---@param args string[]
+function M.flash(args)
+  if #args > 1 then
+    _notify('Usage: :MP flash [stable|preview|<version>]', vim.log.levels.ERROR)
+    return
+  end
+  local mpflash = M.mpflash()
+  if not mpflash then
+    _notify('mpflash not found. ' .. M.INSTALL_HINT, vim.log.levels.ERROR)
+    return
+  end
+  if not Utils.check_port_configured() then
+    return
+  end
+
+  -- The REPL holds the serial port, which mpflash needs; give mpremote time to let go of it
+  local Repl = require('micropython_nvim.repl')
+  if Repl.is_running() then
+    Repl.close()
+    vim.defer_fn(function()
+      _start(mpflash, args[1])
+    end, REPL_RELEASE_MS)
+    return
+  end
+  _start(mpflash, args[1])
 end
 
 return M

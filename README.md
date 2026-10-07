@@ -320,9 +320,13 @@ flashes it in a terminal, so you can follow its progress and answer any question
 :MP flash 1.24.1                  " a specific release
 ```
 
-Only the board on the configured port is flashed (with port `auto`, the first connected device). The REPL is
-closed first, because mpflash needs the serial port. If the board doesn't run MicroPython yet, mpflash asks which
-board it is. Flashing doesn't erase the files on the device.
+Only the board on the configured port is flashed (with port `auto`, the first USB serial device, as mpremote
+picks it). The REPL is closed first, because mpflash needs the serial port. Flashing doesn't erase the files on the
+device.
+
+If the board is connected but doesn't run MicroPython yet (a new ESP32, say), mpflash asks which board it is. A
+board that has no serial port at all, like a Pico held in BOOTSEL mode, can't be found through the port: flash it
+from a shell with `mpflash flash --board RPI_PICO_W` (using your board's ID).
 
 Supported ports, by how mpflash flashes them:
 
@@ -331,6 +335,9 @@ Supported ports, by how mpflash flashes them:
 | rp2 (Raspberry Pi Pico), samd, nrf | UF2: the board is put into its bootloader and the firmware copied to it |
 | esp32, esp8266 | esptool, over the serial port |
 | stm32 (pyboard) | DFU |
+
+Other ports (mimxrt, renesas-ra and others) can be flashed by mpflash only over a debug probe, which `:MP flash`
+does not set up.
 
 mpflash is optional: install it with `uv tool install mpflash` (or `pip install mpflash`). Without it, `:MP flash`
 says how to install it, and `:checkhealth micropython_nvim` lists it as optional. After updating the firmware,
