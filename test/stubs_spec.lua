@@ -137,6 +137,49 @@ describe('micropython_nvim.stubs', function()
     end)
   end)
 
+  describe('declare', function()
+    local original_cwd
+
+    before_each(function()
+      original_cwd = vim.fn.getcwd()
+    end)
+
+    after_each(function()
+      vim.fn.chdir(original_cwd)
+    end)
+
+    it('should replace the declared board stubs, keeping the stdlib stubs', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile({
+          'dev-dependencies = [',
+          '    "micropython-stdlib-stubs",',
+          '    "micropython-rp2-stubs~=1.24.0",',
+          ']',
+        }, dir .. '/pyproject.toml')
+
+        assert.is_true(Stubs.declare('micropython-esp32-stubs==1.24.1.*'))
+
+        assert.same({
+          'dev-dependencies = [',
+          '    "micropython-stdlib-stubs",',
+          '    "micropython-esp32-stubs==1.24.1.*",',
+          ']',
+        }, vim.fn.readfile(dir .. '/pyproject.toml'))
+      end)
+    end)
+
+    it('should report when no stubs are declared', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile({ 'mpremote' }, dir .. '/requirements.txt')
+
+        assert.is_false(Stubs.declare('micropython-esp32-stubs'))
+        assert.same({ 'mpremote' }, vim.fn.readfile(dir .. '/requirements.txt'))
+      end)
+    end)
+  end)
+
   describe('with jobs', function()
     local calls
     local notifications
@@ -370,28 +413,45 @@ describe('micropython_nvim.stubs', function()
         end)
       end)
 
-      it('should replace stubs installed earlier', function()
+      it('should remove the files of stubs installed earlier, keeping the rest', function()
         helpers.with_temp_dir(function(dir)
           vim.fn.chdir(dir)
-          vim.fn.mkdir(dir .. '/typings/micropython_rp2_stubs-1.24.1.dist-info', 'p')
-          vim.fn.writefile({}, dir .. '/typings/rp2.pyi')
+          local info = 'micropython_rp2_stubs-1.24.1.dist-info'
+          vim.fn.mkdir(dir .. '/typings/' .. info, 'p')
+          vim.fn.mkdir(dir .. '/typings/rp2', 'p')
+          vim.fn.writefile({}, dir .. '/typings/rp2/__init__.pyi')
+          vim.fn.writefile({}, dir .. '/typings/machine.pyi')
+          vim.fn.writefile({}, dir .. '/typings/mine.pyi')
+          vim.fn.writefile({
+            'rp2/__init__.pyi,sha256=abc,10',
+            'machine.pyi,sha256=def,20',
+            '../outside.pyi,,',
+            info .. '/RECORD,,',
+          }, dir .. '/typings/' .. info .. '/RECORD')
+          vim.fn.writefile({}, dir .. '/outside.pyi')
 
           Stubs.install('micropython-esp32-stubs')
 
-          assert.equals(0, vim.fn.filereadable(dir .. '/typings/rp2.pyi'))
+          assert.equals(0, vim.fn.filereadable(dir .. '/typings/machine.pyi'))
+          assert.equals(0, vim.fn.isdirectory(dir .. '/typings/rp2'))
+          assert.equals(0, vim.fn.isdirectory(dir .. '/typings/' .. info))
+          assert.equals(1, vim.fn.filereadable(dir .. '/typings/mine.pyi'))
+          assert.equals(1, vim.fn.filereadable(dir .. '/outside.pyi'))
         end)
       end)
 
-      it('should leave a typings folder that holds no stubs package alone', function()
-        helpers.with_temp_dir(function(dir)
-          vim.fn.chdir(dir)
-          vim.fn.mkdir(dir .. '/typings', 'p')
-          vim.fn.writefile({}, dir .. '/typings/mine.pyi')
-
-          Stubs.install('micropython-esp32-stubs')
-
-          assert.equals(1, vim.fn.filereadable(dir .. '/typings/mine.pyi'))
+      it('should tell the caller the install did not run without uv', function()
+        restore_fn()
+        restore_fn = helpers.mock_vim_fn({
+          executable = function()
+            return 0
+          end,
+        })
+        local done
+        Stubs.install('micropython-rp2-stubs', function(ok)
+          done = ok
         end)
+        assert.is_false(done)
       end)
 
       it('should report the install error', function()

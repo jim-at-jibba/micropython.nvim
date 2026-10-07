@@ -178,6 +178,39 @@ describe('micropython_nvim.setup', function()
         Setup.set_stubs()
 
         assert.equals(0, vim.fn.filereadable(dir .. '/pyrightconfig.json'))
+        local warned = vim.tbl_filter(function(n)
+          return n.msg:find('stubPath', 1, true) ~= nil
+        end, notifications)
+        assert.equals(1, #warned)
+      end)
+    end)
+
+    it('should warn and install nothing when the project declares no stubs', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile({ 'mpremote' }, dir .. '/requirements.txt')
+        choose('micropython-esp32-stubs')
+
+        Setup.set_stubs()
+
+        local last = notifications[#notifications]
+        assert.equals(vim.log.levels.WARN, last.level)
+        assert.is_truthy(last.msg:find('micropython-esp32-stubs', 1, true))
+        assert.is_nil(installed)
+      end)
+    end)
+
+    it('should leave a pyright config that is not an object alone', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile(vim.split(fixtures.pyproject_toml, '\n'), dir .. '/pyproject.toml')
+        vim.fn.writefile({ '[', '  1', ']' }, dir .. '/pyrightconfig.json')
+        choose('micropython-esp32-stubs')
+
+        Setup.set_stubs()
+
+        assert.same({ '[', '  1', ']' }, vim.fn.readfile(dir .. '/pyrightconfig.json'))
+        assert.equals('micropython-esp32-stubs', installed)
       end)
     end)
 

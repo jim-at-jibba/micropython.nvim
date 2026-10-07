@@ -174,13 +174,7 @@ end
 ---Switch the project's stubs: the board on the device is suggested first, the choice is
 ---declared in pyproject.toml or requirements.txt and installed into typings/ for pyright
 function M.set_stubs()
-  local cwd = Utils.get_cwd()
-  local declared
-  if Utils.pyproject_exists() then
-    declared = cwd .. '/pyproject.toml'
-  elseif Utils.requirements_exists() then
-    declared = cwd .. '/requirements.txt'
-  else
+  if not Utils.pyproject_exists() and not Utils.requirements_exists() then
     vim.notify(
       'No pyproject.toml or requirements.txt found. Run :MP init first.',
       vim.log.levels.WARN,
@@ -194,11 +188,12 @@ function M.set_stubs()
       return
     end
 
-    local line = declared:match('pyproject%.toml$') and string.format('    "%s",', choice) or choice
-    if not Utils.replace_line(declared, 'micropython%-.*%-stubs', line) then
+    if not Stubs.declare(choice) then
       vim.notify(
-        'Failed to set micropython stubs',
-        vim.log.levels.ERROR,
+        'No MicroPython stubs declared in pyproject.toml or requirements.txt. Add '
+          .. choice
+          .. ' to your dev dependencies, then run :MP install.',
+        vim.log.levels.WARN,
         { title = 'micropython.nvim' }
       )
       return

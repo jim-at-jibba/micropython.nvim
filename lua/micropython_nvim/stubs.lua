@@ -74,7 +74,7 @@ M.PYRIGHT_CONFIG = string.format(
 }
 ]],
   TYPINGS,
-  vim.json.encode(PYRIGHT_EXCLUDE):gsub(',', ', ')
+  (vim.json.encode(PYRIGHT_EXCLUDE):gsub(',', ', '))
 )
 
 ---@param msg string
@@ -132,21 +132,48 @@ function M.requirement(package, version)
   return package
 end
 
----The stub requirement a project declares in pyproject.toml or requirements.txt
----@return string?
-function M.find_requirement()
+---Where a project declares its board stubs
+---@class MicroPython.DeclaredStubs
+---@field path string pyproject.toml or requirements.txt
+---@field line integer
+---@field requirement string e.g. "micropython-rp2-stubs==1.24.1.*"
+
+---@return MicroPython.DeclaredStubs?
+local function _find_declared()
   local cwd = Utils.get_cwd()
   for _, file in ipairs({ 'pyproject.toml', 'requirements.txt' }) do
     local path = cwd .. '/' .. file
     if vim.fn.filereadable(path) == 1 then
-      for _, line in ipairs(vim.fn.readfile(path)) do
+      for i, line in ipairs(vim.fn.readfile(path)) do
         local requirement = line:match('(micropython%-[%w_%-]+%-stubs[^"%s,]*)')
         if requirement and not requirement:match('^micropython%-stdlib%-stubs') then
-          return requirement
+          return { path = path, line = i, requirement = requirement }
         end
       end
     end
   end
+end
+
+---The stub requirement a project declares in pyproject.toml or requirements.txt
+---@return string?
+function M.find_requirement()
+  local declared = _find_declared()
+  return declared and declared.requirement
+end
+
+---Replace the board stubs a project declares, leaving the rest of the line and file as is
+---@param requirement string
+---@return boolean replaced false when the project declares no board stubs
+function M.declare(requirement)
+  local declared = _find_declared()
+  if not declared then
+    return false
+  end
+  local lines = vim.fn.readfile(declared.path)
+  local line = lines[declared.line]
+  local first, last = line:find(declared.requirement, 1, true)
+  lines[declared.line] = line:sub(1, first - 1) .. requirement .. line:sub(last + 1)
+  return vim.fn.writefile(lines, declared.path) == 0
 end
 
 ---Run a command, collecting its output
@@ -268,6 +295,9 @@ end
 ---Pick stubs: those matching the connected board first, then every known package
 ---@param on_choice fun(requirement?: string)
 function M.choose(on_choice)
+  if Config.is_port_configured() then
+    _notify('Detecting the board for stubs...', vim.log.levels.INFO)
+  end
   M.suggest(function(suggestions, board)
     local items = vim.deepcopy(suggestions)
     local suggested = {}
@@ -283,6 +313,14 @@ function M.choose(on_choice)
   end)
 end
 
+---@param where string
+local function _notify_add_stub_path(where)
+  _notify(
+    string.format('Could not update %s: set stubPath to "%s" there for pyright', where, TYPINGS),
+    vim.log.levels.WARN
+  )
+end
+
 ---Point pyright at typings/: add stubPath (and exclude typings/ when nothing is excluded yet)
 ---to pyrightconfig.json, or create one unless pyproject.toml configures pyright
 function M.configure_pyright()
@@ -292,7 +330,11 @@ function M.configure_pyright()
   if vim.fn.filereadable(path) == 1 then
     local lines = vim.fn.readfile(path)
     local ok, config = pcall(vim.json.decode, table.concat(lines, '\n'))
-    if not ok or type(config) ~= 'table' or config.stubPath then
+    if ok and type(config) == 'table' and config.stubPath then
+      return
+    end
+    if not ok or type(config) ~= 'table' or config[1] ~= nil then
+      _notify_add_stub_path('pyrightconfig.json')
       return
     end
     if vim.tbl_isempty(config) then
@@ -322,6 +364,7 @@ function M.configure_pyright()
   if vim.fn.filereadable(pyproject) == 1 then
     for _, line in ipairs(vim.fn.readfile(pyproject)) do
       if line:match('^%s*%[tool%.pyright%]') then
+        _notify_add_stub_path('[tool.pyright] in pyproject.toml')
         return
       end
     end
@@ -329,11 +372,33 @@ function M.configure_pyright()
   vim.fn.writefile(vim.split(vim.trim(M.PYRIGHT_CONFIG), '\n'), path)
 end
 
----Remove a typings folder that holds stubs from an earlier install
----@param path string
-local function _clear_typings(path)
-  if #vim.fn.glob(path .. '/micropython_*stubs-*.dist-info', false, true) > 0 then
-    vim.fn.delete(path, 'rf')
+---Remove the files of stubs installed earlier (listed in their RECORD), keeping anything else
+---in typings/
+---@param typings string
+local function _remove_installed_stubs(typings)
+  local dirs = {}
+  for _, record in
+    ipairs(vim.fn.glob(typings .. '/micropython_*stubs-*.dist-info/RECORD', false, true))
+  do
+    for _, line in ipairs(vim.fn.readfile(record)) do
+      local file = line:match('^([^,]+)')
+      if file and not file:find('..', 1, true) and not file:match('^[/\\]') then
+        vim.fn.delete(typings .. '/' .. file)
+        local dir = vim.fn.fnamemodify(file, ':h')
+        while dir ~= '.' and dir ~= '' and not dirs[dir] do
+          dirs[dir] = true
+          dir = vim.fn.fnamemodify(dir, ':h')
+        end
+      end
+    end
+  end
+
+  local deepest_first = vim.tbl_keys(dirs)
+  table.sort(deepest_first, function(a, b)
+    return #a > #b
+  end)
+  for _, dir in ipairs(deepest_first) do
+    vim.fn.delete(typings .. '/' .. dir, 'd')
   end
 end
 
@@ -351,10 +416,13 @@ function M.install(requirement, on_done)
       ),
       vim.log.levels.WARN
     )
+    if on_done then
+      on_done(false)
+    end
     return
   end
 
-  _clear_typings(cwd .. '/' .. TYPINGS)
+  _remove_installed_stubs(cwd .. '/' .. TYPINGS)
   _notify(string.format('Installing %s into %s/...', requirement, TYPINGS), vim.log.levels.INFO)
   _job({ 'uv', 'pip', 'install', '--target', TYPINGS, requirement }, { cwd = cwd }, function(result)
     if result.code == 0 then
