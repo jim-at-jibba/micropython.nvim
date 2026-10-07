@@ -30,19 +30,22 @@ M.DEFAULT_IGNORE_LIST = {
 local AUGROUP = 'micropython_nvim_upload_on_save'
 
 ---@class MicroPython.UploadFile
----@field full string Local path
----@field relative string Path on the device, relative to its root
+---@field local_path string
+---@field device_path string Path on the device, relative to its root
 
 ---The ignore list: defaults plus space-separated extra names or project-relative paths
 ---@param extra? string
 ---@return table<string, boolean>
 local function _ignore_set(extra)
   local ignore = {}
-  for name in pairs(M.DEFAULT_IGNORE_LIST) do
+  local function add(name)
     ignore[(name:gsub('/+$', ''))] = true
   end
+  for name in pairs(M.DEFAULT_IGNORE_LIST) do
+    add(name)
+  end
   for word in string.gmatch(extra or '', '%S+') do
-    ignore[(word:gsub('/+$', ''))] = true
+    add(word)
   end
   return ignore
 end
@@ -87,7 +90,7 @@ local function _collect_files(root, ignore, directory)
     elseif file_type == 'directory' then
       vim.list_extend(files, _collect_files(root, ignore, relative))
     else
-      table.insert(files, { full = root .. '/' .. relative, relative = relative })
+      table.insert(files, { local_path = root .. '/' .. relative, device_path = relative })
     end
   end
 
@@ -100,7 +103,7 @@ end
 local function _parent_dirs(files)
   local seen, dirs = {}, {}
   for _, file in ipairs(files) do
-    local dir = vim.fs.dirname(file.relative)
+    local dir = vim.fs.dirname(file.device_path)
     while dir and dir ~= '.' and dir ~= '' and not seen[dir] do
       seen[dir] = true
       table.insert(dirs, dir)
@@ -148,7 +151,7 @@ local function _upload_args(files)
     if #args > 0 then
       table.insert(args, '+')
     end
-    vim.list_extend(args, { 'cp', file.full, ':' .. file.relative })
+    vim.list_extend(args, { 'cp', file.local_path, ':' .. file.device_path })
   end
   return args
 end
@@ -165,10 +168,9 @@ local function _project_relative(path)
 end
 
 ---@param path string
+---@return MicroPython.UploadFile
 local function _upload_file(path)
-  local relative = _project_relative(path) or vim.fs.basename(path)
-  local args = _upload_args({ { full = path, relative = relative } })
-  Mpremote.run(args, { name = 'Upload ' .. relative })
+  return { local_path = path, device_path = _project_relative(path) or vim.fs.basename(path) }
 end
 
 ---Upload the current buffer to its project-relative path on the device
@@ -176,7 +178,13 @@ function M.upload_current()
   if not Utils.check_port_configured() then
     return
   end
-  _upload_file(vim.api.nvim_buf_get_name(0))
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == '' then
+    vim.notify('Buffer has no file to upload', vim.log.levels.WARN, { title = 'micropython.nvim' })
+    return
+  end
+  local file = _upload_file(path)
+  Mpremote.run(_upload_args({ file }), { name = 'Upload ' .. file.device_path })
 end
 
 ---@class MicroPython.UploadAllOptions
@@ -199,6 +207,32 @@ function M.upload_all(opts)
   Mpremote.run(_upload_args(files), { name = 'Upload all (' .. #files .. ' files)' })
 end
 
+-- Saves waiting for the running upload, so only one job uses the serial port at a time
+local save_queue = {
+  running = false,
+  ---@type string[]
+  paths = {},
+}
+
+local function _flush_saves()
+  if save_queue.running or #save_queue.paths == 0 then
+    return
+  end
+  local files = vim.tbl_map(_upload_file, save_queue.paths)
+  save_queue.paths = {}
+  save_queue.running = true
+
+  local name = #files == 1 and ('Upload ' .. files[1].device_path)
+    or ('Upload ' .. #files .. ' saved files')
+  Mpremote.run(_upload_args(files), {
+    name = name,
+    on_exit = function()
+      save_queue.running = false
+      _flush_saves()
+    end,
+  })
+end
+
 ---@param path string
 local function _on_save(path)
   if not (Utils.config_exists() or Utils.ampy_config_exists()) then
@@ -208,10 +242,14 @@ local function _on_save(path)
   if not relative or _is_ignored(relative, _ignore_set()) then
     return
   end
+  -- Silent: a save without a port is not an upload request worth warning about
   if not Config.is_port_configured() then
     return
   end
-  _upload_file(path)
+  if not vim.tbl_contains(save_queue.paths, path) then
+    table.insert(save_queue.paths, path)
+  end
+  _flush_saves()
 end
 
 ---Upload project files when they are written, if `upload_on_save` is enabled

@@ -132,7 +132,8 @@ With lazy.nvim, call it from `config`:
 
 With `upload_on_save = true`, every file you write inside a MicroPython project (a folder with a
 `.micropython` file) is uploaded to the same relative path on the device. Files and folders on the
-[ignore list](#upload-ignore-list) are not uploaded.
+[ignore list](#upload-ignore-list) are not uploaded (only the default list applies on save). Files
+saved while an upload is running are queued and sent together when it finishes.
 
 ## Quickstart
 

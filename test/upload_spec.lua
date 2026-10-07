@@ -335,6 +335,14 @@ describe('micropython_nvim.upload', function()
       vim.cmd('bwipeout!')
     end)
 
+    it('should warn and not upload a buffer without a file', function()
+      vim.cmd('enew')
+      Upload.upload_current()
+      assert.equals(0, #calls)
+      assert.is_truthy(notifications[1].msg:find('no file', 1, true))
+      vim.cmd('bwipeout!')
+    end)
+
     it('should copy a top-level file without exec', function()
       make_files({ 'main.py' })
       vim.cmd('edit ' .. vim.fn.fnameescape(project .. '/main.py'))
@@ -429,6 +437,43 @@ describe('micropython_nvim.upload', function()
 
       assert.equals(0, #calls)
       vim.fn.delete(outside)
+    end)
+
+    it('should queue saves while an upload runs and send them together afterwards', function()
+      Config.setup({ upload_on_save = true, port = '/dev/ttyUSB0' })
+      Upload.setup_upload_on_save()
+      make_files({ '.micropython', 'main.py', 'lib/a.py', 'lib/b.py' })
+
+      save('main.py')
+      save('lib/a.py')
+      save('lib/b.py')
+      save('lib/a.py')
+      assert.equals(1, #calls)
+
+      calls[1].opts.on_exit(1, 0)
+
+      assert.equals(2, #calls)
+      assert.same({
+        ['lib/a.py'] = project .. '/lib/a.py',
+        ['lib/b.py'] = project .. '/lib/b.py',
+      }, copies(mpremote_args(calls[2])))
+
+      calls[2].opts.on_exit(2, 0)
+      save('main.py')
+      assert.equals(3, #calls)
+    end)
+
+    it('should keep uploading queued saves after a failed upload', function()
+      Config.setup({ upload_on_save = true, port = '/dev/ttyUSB0' })
+      Upload.setup_upload_on_save()
+      make_files({ '.micropython', 'main.py', 'boot.py' })
+
+      save('main.py')
+      save('boot.py')
+      calls[1].opts.on_exit(1, 1)
+
+      assert.equals(2, #calls)
+      assert.same({ ['boot.py'] = project .. '/boot.py' }, copies(mpremote_args(calls[2])))
     end)
 
     it('should stop uploading when set up again with it disabled', function()
