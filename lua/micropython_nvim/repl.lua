@@ -34,9 +34,11 @@ local function _notify(msg, level)
   vim.notify(msg, level, { title = 'micropython.nvim' })
 end
 
+---Whether the REPL's mpremote is running. Tracked by on_exit rather than jobwait(), which can
+---hang when called from inside the job's own callbacks.
 ---@return boolean
 function M.is_running()
-  return state.job ~= nil and vim.fn.jobwait({ state.job }, 0)[1] == -1
+  return state.job ~= nil
 end
 
 ---@param buf integer
@@ -69,7 +71,12 @@ local function _write_next_chunk(job)
   end
   state.sending = true
   local chunk = table.remove(state.outbox, 1)
-  vim.api.nvim_chan_send(job, chunk.data)
+  -- The process may have exited before its on_exit has run
+  if not pcall(vim.api.nvim_chan_send, job, chunk.data) then
+    state.outbox = {}
+    state.sending = false
+    return
+  end
   _scroll_to_end()
   vim.defer_fn(function()
     _write_next_chunk(job)

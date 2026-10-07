@@ -29,6 +29,7 @@ jobs:
   test:
     # Windows is not supported: terminal commands and tests use POSIX shell syntax
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
