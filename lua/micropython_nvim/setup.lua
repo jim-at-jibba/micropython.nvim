@@ -1,6 +1,7 @@
 local Config = require('micropython_nvim.config')
 local Utils = require('micropython_nvim.utils')
 local Mpremote = require('micropython_nvim.mpremote')
+local Stubs = require('micropython_nvim.stubs')
 local UI = require('micropython_nvim.ui')
 
 local M = {}
@@ -14,21 +15,6 @@ M.BAUD_RATES = {
   '38400',
   '57600',
   '115200',
-}
-
----@type string[]
-M.STUB_OPTIONS = {
-  'micropython-rp2-stubs',
-  'micropython-rp2-pico-stubs',
-  'micropython-rp2-pico-w-stubs',
-  'micropython-esp32-stubs',
-  'micropython-esp32-um-tinypico-stubs',
-  'micropython-esp8266-stubs',
-  'micropython-stm32-stubs',
-  'micropython-samd-stubs',
-  'micropython-unix-stubs',
-  'micropython-windows-stubs',
-  'micropython-webassembly-stubs',
 }
 
 ---@param on_devices fun(devices: MicroPython.Device[], err?: string)
@@ -185,46 +171,41 @@ function M.set_port()
   end)
 end
 
+---Switch the project's stubs: the board on the device is suggested first, the choice is
+---declared in pyproject.toml or requirements.txt and installed into typings/ for pyright
 function M.set_stubs()
-  UI.select(M.STUB_OPTIONS, {
-    prompt = 'Select stubs for board:',
-  }, function(choice)
+  if not Utils.pyproject_exists() and not Utils.requirements_exists() then
+    vim.notify(
+      'No pyproject.toml or requirements.txt found. Run :MP init first.',
+      vim.log.levels.WARN,
+      { title = 'micropython.nvim' }
+    )
+    return
+  end
+
+  Stubs.choose(function(choice)
     if not choice then
       return
     end
 
-    local cwd = Utils.get_cwd()
-    local result
-
-    if Utils.pyproject_exists() then
-      local pyproject_path = cwd .. '/pyproject.toml'
-      local new_line = string.format('    "%s",', choice)
-      result = Utils.replace_line(pyproject_path, 'micropython%-.*%-stubs', new_line)
-    elseif Utils.requirements_exists() then
-      local requirements_path = cwd .. '/requirements.txt'
-      result = Utils.replace_line(requirements_path, 'micropython%-.*%-stubs', choice)
-    else
+    if not Stubs.declare(choice) then
       vim.notify(
-        'No pyproject.toml or requirements.txt found. Run :MPInit first.',
+        'No MicroPython stubs declared in pyproject.toml or requirements.txt. Add '
+          .. choice
+          .. ' to your dev dependencies, then run :MP install.',
         vim.log.levels.WARN,
         { title = 'micropython.nvim' }
       )
       return
     end
 
-    if result then
-      vim.notify(
-        'MicroPython stubs set to: ' .. choice,
-        vim.log.levels.INFO,
-        { title = 'micropython.nvim' }
-      )
-    else
-      vim.notify(
-        'Failed to set micropython stubs',
-        vim.log.levels.ERROR,
-        { title = 'micropython.nvim' }
-      )
-    end
+    Stubs.configure_pyright()
+    vim.notify(
+      'MicroPython stubs set to: ' .. choice,
+      vim.log.levels.INFO,
+      { title = 'micropython.nvim' }
+    )
+    Stubs.install(choice)
   end)
 end
 

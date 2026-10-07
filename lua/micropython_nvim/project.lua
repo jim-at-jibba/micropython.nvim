@@ -1,30 +1,11 @@
+local Stubs = require('micropython_nvim.stubs')
 local Utils = require('micropython_nvim.utils')
 local UI = require('micropython_nvim.ui')
 
 local M = {}
 
-M.BOARDS = {
-  { id = 'rp2', name = 'Raspberry Pi Pico (RP2)', stub = 'micropython-rp2-stubs' },
-  { id = 'rp2-pico', name = 'Raspberry Pi Pico', stub = 'micropython-rp2-pico-stubs' },
-  { id = 'rp2-pico-w', name = 'Raspberry Pi Pico W', stub = 'micropython-rp2-pico-w-stubs' },
-  { id = 'esp32', name = 'ESP32', stub = 'micropython-esp32-stubs' },
-  { id = 'esp32-tinypico', name = 'ESP32 TinyPICO', stub = 'micropython-esp32-um-tinypico-stubs' },
-  { id = 'esp8266', name = 'ESP8266', stub = 'micropython-esp8266-stubs' },
-  { id = 'stm32', name = 'STM32 / Pyboard', stub = 'micropython-stm32-stubs' },
-  { id = 'samd', name = 'SAMD (Wio Terminal, etc.)', stub = 'micropython-samd-stubs' },
-  { id = 'unix', name = 'Unix', stub = 'micropython-unix-stubs' },
-  { id = 'windows', name = 'Windows', stub = 'micropython-windows-stubs' },
-  { id = 'webassembly', name = 'WebAssembly', stub = 'micropython-webassembly-stubs' },
-}
-
-M.DEFAULT_BOARD = 'rp2'
-
 M.TEMPLATES = {
-  pyright_config = [[
-{
-  "reportMissingModuleSource": false
-}
-]],
+  pyright_config = Stubs.PYRIGHT_CONFIG,
 
   micropython_config = [[
 # MicroPython project configuration
@@ -48,15 +29,16 @@ while True:
 
   gitignore = [[
 .venv/
+typings/
 __pycache__/
 *.pyc
 ]],
 }
 
 ---@param project_name string
----@param stub_package string
+---@param stubs string stub requirement
 ---@return string
-local function _generate_pyproject(project_name, stub_package)
+local function _generate_pyproject(project_name, stubs)
   return string.format(
     [[
 [project]
@@ -74,7 +56,7 @@ dev-dependencies = [
 ]
 ]],
     project_name,
-    stub_package
+    stubs
   )
 end
 
@@ -90,6 +72,7 @@ local function _write_file_safe(path, content)
   return true
 end
 
+---Install dependencies, then the declared stubs into typings/ for pyright
 ---@param cwd string
 local function _run_uv_sync(cwd)
   vim.notify('Running uv sync...', vim.log.levels.INFO, { title = 'micropython.nvim' })
@@ -99,6 +82,10 @@ local function _run_uv_sync(cwd)
       vim.schedule(function()
         if code == 0 then
           vim.notify('Dependencies installed', vim.log.levels.INFO, { title = 'micropython.nvim' })
+          local stubs = Stubs.find_requirement()
+          if stubs then
+            Stubs.install(stubs)
+          end
         else
           vim.notify(
             'uv sync failed (exit ' .. code .. ')',
@@ -148,15 +135,15 @@ local function _check_legacy_files()
   end
 end
 
----@param board table
-local function _create_project_files(board)
+---@param stubs string stub requirement
+local function _create_project_files(stubs)
   local cwd = Utils.get_cwd()
   local project_name = Utils.get_directory_name()
 
   local files_to_create = {
     {
       path = cwd .. '/pyproject.toml',
-      content = _generate_pyproject(project_name, board.stub),
+      content = _generate_pyproject(project_name, stubs),
       name = 'pyproject.toml',
     },
     {
@@ -183,40 +170,18 @@ local function _create_project_files(board)
 
   _check_legacy_files()
 
-  vim.notify(
-    'Project created with ' .. board.name .. ' stubs',
-    vim.log.levels.INFO,
-    { title = 'micropython.nvim' }
-  )
+  vim.notify('Project created with ' .. stubs, vim.log.levels.INFO, { title = 'micropython.nvim' })
 
   _prompt_uv_sync(cwd)
 end
 
-local function _select_board_and_create()
-  local board_names = {}
-  for _, board in ipairs(M.BOARDS) do
-    table.insert(board_names, board.name)
-  end
-
-  UI.select(board_names, {
-    prompt = 'Select target board:',
-  }, function(choice)
+local function _choose_stubs_and_create()
+  Stubs.choose(function(choice)
     if not choice then
       vim.notify('Project init cancelled', vim.log.levels.INFO, { title = 'micropython.nvim' })
       return
     end
-
-    local selected_board = nil
-    for _, board in ipairs(M.BOARDS) do
-      if board.name == choice then
-        selected_board = board
-        break
-      end
-    end
-
-    if selected_board then
-      _create_project_files(selected_board)
-    end
+    _create_project_files(choice)
   end)
 end
 
@@ -245,7 +210,7 @@ function M.init(force)
       prompt = 'Files exist (' .. table.concat(existing_files, ', ') .. '). Overwrite?',
     }, function(choice)
       if choice == 'Yes' then
-        _select_board_and_create()
+        _choose_stubs_and_create()
       else
         vim.notify('Project init cancelled', vim.log.levels.INFO, { title = 'micropython.nvim' })
       end
@@ -253,7 +218,7 @@ function M.init(force)
     return
   end
 
-  _select_board_and_create()
+  _choose_stubs_and_create()
 end
 
 function M.install()
