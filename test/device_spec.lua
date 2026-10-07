@@ -29,6 +29,10 @@ describe('micropython_nvim.device', function()
       }, Device.parse_info(INFO_OUTPUT))
     end)
 
+    it('should skip storage it cannot read', function()
+      assert.same({}, Device.parse_info('storage\tnope\t1'))
+    end)
+
     it('should ignore other output and missing fields', function()
       assert.same(
         { board = 'ESP32 module with ESP32' },
@@ -76,6 +80,10 @@ describe('micropython_nvim.device', function()
     it('should complete micropython-lib packages by prefix', function()
       local matches = Device.mip_complete('umqtt')
       assert.same({ 'umqtt.robust', 'umqtt.simple' }, matches)
+    end)
+
+    it('should not complete the target directory', function()
+      assert.same({}, Device.mip_complete('', 2))
     end)
 
     it('should offer the github: and gitlab: sources', function()
@@ -265,6 +273,10 @@ describe('micropython_nvim.device', function()
 
     it('should complete :MP mip packages', function()
       assert.same({ 'aioble', 'aiohttp', 'aiorepl' }, vim.fn.getcompletion('MP mip aio', 'cmdline'))
+    end)
+
+    it('should not complete packages in the target slot', function()
+      assert.same({}, vim.fn.getcompletion('MP mip aioble ', 'cmdline'))
     end)
   end)
 end)

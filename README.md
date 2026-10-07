@@ -298,10 +298,11 @@ by your computer, so the device doesn't need a network connection.
 :MP mip aioble                    " from micropython-lib
 :MP mip github:org/repo           " from GitHub (also gitlab:)
 :MP mip github:org/repo@v1.2      " a branch or tag
-:MP mip umqtt.simple lib/mqtt     " into a directory on the device (default: lib)
+:MP mip umqtt.simple lib/mqtt     " into a directory on the device
 ```
 
-`<Tab>` completes common micropython-lib packages, and `:MP mip` with no package offers a picker of them.
+Without a target, mip installs into the device's `lib` folder (the first `.../lib` entry on its `sys.path`). `<Tab>`
+completes common micropython-lib packages, and `:MP mip` with no package offers a picker of them.
 
 ### Upload Ignore List
 

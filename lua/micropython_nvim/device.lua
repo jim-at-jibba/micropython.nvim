@@ -21,7 +21,10 @@ try:
     print('storage\t%d\t%d' % (s[0] * s[2], s[0] * s[3]))
 except Exception:
     pass
-print('time\t%04d-%02d-%02d %02d:%02d:%02d' % time.localtime()[:6])
+try:
+    print('time\t%04d-%02d-%02d %02d:%02d:%02d' % time.localtime()[:6])
+except Exception:
+    pass
 ]]
 
 -- Common micropython-lib packages offered by :MP mip completion and its picker
@@ -64,8 +67,9 @@ function M.parse_info(output)
   for line in vim.gsplit(output, '\n') do
     local fields = vim.split((line:gsub('\r$', '')), '\t')
     local key = fields[1]
-    if key == 'storage' and #fields == 3 then
-      info.storage = { total = tonumber(fields[2]), free = tonumber(fields[3]) }
+    local total, free = tonumber(fields[2]), tonumber(fields[3])
+    if key == 'storage' and #fields == 3 and total and free then
+      info.storage = { total = total, free = free }
     elseif (key == 'firmware' or key == 'board' or key == 'time') and #fields == 2 then
       info[key] = fields[2]
     end
@@ -122,12 +126,13 @@ local function _show(lines)
   for _, line in ipairs(lines) do
     width = math.max(width, vim.fn.strdisplaywidth(line))
   end
+  width = math.min(width, math.max(vim.o.columns - 4, 1))
   local win = vim.api.nvim_open_win(buf, true, {
     relative = 'editor',
     width = width + 2,
     height = #lines,
-    row = math.floor((vim.o.lines - #lines) / 2) - 1,
-    col = math.floor((vim.o.columns - width) / 2),
+    row = math.max(math.floor((vim.o.lines - #lines) / 2) - 1, 0),
+    col = math.max(math.floor((vim.o.columns - width) / 2), 0),
     style = 'minimal',
     border = 'rounded',
     title = ' MicroPython device ',
@@ -183,8 +188,12 @@ end
 
 ---Completion for :MP mip: common micropython-lib packages and package sources
 ---@param arglead string
+---@param index? integer which argument is being completed; only the package is completed
 ---@return string[]
-function M.mip_complete(arglead)
+function M.mip_complete(arglead, index)
+  if index and index > 1 then
+    return {}
+  end
   local candidates = vim.list_extend(vim.deepcopy(M.MIP_PACKAGES), MIP_SOURCES)
   return vim.tbl_filter(function(name)
     return vim.startswith(name, arglead)
