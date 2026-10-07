@@ -3,7 +3,7 @@
 ## Commands
 - Format: `stylua .`
 - Format check: `stylua --check .`
-- Lint: `luarocks install luacheck && luacheck .`
+- Lint: `luacheck .`
 - Test all: `vusted ./test`
 - Test single: `vusted ./test/plugin_spec.lua`
 
