@@ -106,6 +106,7 @@ describe('micropython_nvim.commands', function()
         'interrupt',
         'info',
         'mip',
+        'flash',
         'sync',
         'reset',
         'hard_reset',

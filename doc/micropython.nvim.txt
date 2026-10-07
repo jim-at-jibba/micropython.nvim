@@ -57,6 +57,7 @@ FEATURES                          *micropython.nvim-micropython_nvim-features*
 - **File browser** - browse, edit, delete, download and create files and folders on the device
 - **Device management** - list connected devices, reset, show device info and set its clock
 - **Packages** - install micropython-lib and GitHub packages on the device with `mip`
+- **Firmware** - install or update MicroPython on the board with mpflash <https://github.com/Josverl/mpflash>
 - **Project initialization** with type stubs matched to the connected board, set up for pyright
 
 
@@ -66,7 +67,8 @@ REQUIREMENTS                  *micropython.nvim-micropython_nvim-requirements*
 - mpremote <https://docs.micropython.org/en/latest/reference/mpremote.html>
 - uv <https://docs.astral.sh/uv/> (for dependency management, Unix-only)
 - Optional: snacks.nvim <https://github.com/folke/snacks.nvim> for nicer terminals and pickers. Without it the plugin uses Neovim’s built-in terminal and `vim.ui.select`.
-- Optional: mpflash <https://github.com/Josverl/mpflash> for flashing firmware
+- Optional: mpflash <https://github.com/Josverl/mpflash> for flashing firmware with `:MP flash`
+    (`uv tool install mpflash`, or `pip install mpflash`)
 
 Run `:checkhealth micropython_nvim` (or `:MP health`) to check your setup.
 
@@ -215,6 +217,9 @@ DEVELOPMENT COMMANDS ~
                                 press s to set the device clock
 
   :MP mip <package> [target]    Install a package on the device with mip
+
+  :MP flash [version]           Install or update MicroPython firmware
+                                with mpflash
   -----------------------------------------------------------------------
 
 FILE MANAGEMENT ~
@@ -399,6 +404,52 @@ need a network connection.
 Without a target, mip installs into the device’s `lib` folder (the first
 `.../lib` entry on its `sys.path`). `<Tab>` completes common micropython-lib
 packages, and `:MP mip` with no package offers a picker of them.
+
+
+FLASHING FIRMWARE ~
+
+`:MP flash` installs or updates MicroPython on the board with mpflash
+<https://github.com/Josverl/mpflash>. It detects the connected board, then
+offers a picker of firmware versions: `stable` (the latest release, the
+default), `preview` (the latest nightly build) and the most recent releases.
+mpflash downloads the firmware for that board and flashes it in a terminal, so
+you can follow its progress and answer any question it asks.
+
+>vim
+    :MP flash                         " detect the board, then pick a version
+    :MP flash stable                  " the latest release, no picker
+    :MP flash 1.24.1                  " a specific release
+<
+
+Only the board on the configured port is flashed (with port `auto`, the first
+USB serial device, as mpremote picks it). The REPL is closed first, because
+mpflash needs the serial port. Flashing doesn’t erase the files on the
+device.
+
+If the board is connected but doesn’t run MicroPython yet (a new ESP32, say),
+mpflash asks which board it is. A board that has no serial port at all, like a
+Pico held in BOOTSEL mode, can’t be found through the port: flash it from a
+shell with `mpflash flash --board RPI_PICO_W` (using your board’s ID).
+
+Supported ports, by how mpflash flashes them:
+
+  -----------------------------------------------------------------------
+  Port                           Method
+  ------------------------------ ----------------------------------------
+  rp2 (Raspberry Pi Pico), samd, UF2: the board is put into its
+  nrf                            bootloader and the firmware copied to it
+
+  esp32, esp8266                 esptool, over the serial port
+
+  stm32 (pyboard)                DFU
+  -----------------------------------------------------------------------
+Other ports (mimxrt, renesas-ra and others) can be flashed by mpflash only over
+a debug probe, which `:MP flash` does not set up.
+
+mpflash is optional: install it with `uv tool install mpflash` (or `pip install
+mpflash`). Without it, `:MP flash` says how to install it, and `:checkhealth
+micropython_nvim` lists it as optional. After updating the firmware, `:MP
+set_stubs` picks stubs matching the new version.
 
 
 UPLOAD IGNORE LIST ~

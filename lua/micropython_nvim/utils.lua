@@ -40,6 +40,47 @@ function M.pyproject_exists()
   return vim.fn.filereadable(M.get_cwd() .. '/pyproject.toml') == 1
 end
 
+---@class MicroPython.JobResult
+---@field code integer Exit code, or -1 if the command could not be started
+---@field stdout string
+---@field stderr string
+
+---Join an argv into a shell-escaped command string, for a terminal
+---@param argv string[]
+---@return string
+function M.shell_join(argv)
+  return table.concat(vim.tbl_map(vim.fn.shellescape, argv), ' ')
+end
+
+---Run a command in the background without a shell, collecting its output
+---@param argv string[]
+---@param opts { cwd?: string }
+---@param on_exit fun(result: MicroPython.JobResult)
+function M.run_job(argv, opts, on_exit)
+  local stdout, stderr = {}, {}
+  local ok, job = pcall(vim.fn.jobstart, argv, {
+    cwd = opts.cwd,
+    stdout_buffered = true,
+    stderr_buffered = true,
+    on_stdout = function(_, data)
+      stdout = data
+    end,
+    on_stderr = function(_, data)
+      stderr = data
+    end,
+    on_exit = function(_, code)
+      on_exit({
+        code = code,
+        stdout = vim.trim(table.concat(stdout, '\n')),
+        stderr = vim.trim(table.concat(stderr, '\n')),
+      })
+    end,
+  })
+  if not ok or job <= 0 then
+    on_exit({ code = -1, stdout = '', stderr = argv[1] .. ' could not be started' })
+  end
+end
+
 ---snacks.nvim if installed (module or the Snacks global), else nil
 ---@return table|nil
 function M.get_snacks()

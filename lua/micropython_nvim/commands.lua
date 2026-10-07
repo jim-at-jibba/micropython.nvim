@@ -57,6 +57,15 @@ M.subcommands = {
       return require('micropython_nvim.device').mip_complete(arglead, index)
     end,
   },
+  flash = {
+    desc = 'Flash MicroPython firmware with mpflash: flash [stable|preview|<version>]',
+    impl = function(args)
+      require('micropython_nvim').flash(args)
+    end,
+    complete = function(arglead, index)
+      return require('micropython_nvim.flash').complete(arglead, index)
+    end,
+  },
   sync = { desc = 'Mount the project directory on the device', impl = _facade('sync') },
   reset = { desc = 'Soft reset the device', impl = _facade('soft_reset') },
   hard_reset = { desc = 'Hard reset the device', impl = _facade('hard_reset') },
