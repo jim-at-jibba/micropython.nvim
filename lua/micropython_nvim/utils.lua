@@ -26,6 +26,16 @@ function M.pyproject_exists()
   return vim.fn.filereadable(M.get_cwd() .. '/pyproject.toml') == 1
 end
 
+---snacks.nvim if installed (module or the Snacks global), else nil
+---@return table|nil
+function M.get_snacks()
+  local ok, snacks = pcall(require, 'snacks')
+  if ok and snacks then
+    return snacks
+  end
+  return rawget(_G, 'Snacks')
+end
+
 ---@return boolean
 function M.is_uv_project()
   return M.uv_available() and M.pyproject_exists()

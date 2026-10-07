@@ -63,8 +63,7 @@ local function _check_uv()
 end
 
 local function _check_snacks()
-  local ok = rawget(_G, 'Snacks') ~= nil or pcall(require, 'snacks')
-  if ok then
+  if Utils.get_snacks() then
     vim.health.ok('snacks.nvim installed: used for terminals and pickers')
   else
     vim.health.info(

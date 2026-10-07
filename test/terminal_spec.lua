@@ -77,6 +77,20 @@ describe('micropython_nvim.terminal', function()
       assert.is_true(found)
     end)
 
+    it('should keep the window open when the command fails', function()
+      Terminal.open('echo connection failed; exit 1')
+      local win = vim.api.nvim_get_current_win()
+      local buf = vim.api.nvim_get_current_buf()
+
+      vim.wait(3000, function()
+        local text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), '\n')
+        return text:find('exited', 1, true) ~= nil
+      end)
+      vim.wait(100)
+
+      assert.is_true(vim.api.nvim_win_is_valid(win))
+    end)
+
     it('should close the window when the command exits', function()
       Terminal.open('true')
       local win = vim.api.nvim_get_current_win()

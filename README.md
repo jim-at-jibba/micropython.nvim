@@ -180,7 +180,7 @@ The previous `:MPxxx` commands still work as aliases:
 
 ### Terminal Keymaps
 
-Commands that open a terminal (`:MP run`, `:MP repl`, etc.) use the snacks.nvim terminal when it is installed, and a floating built-in Neovim terminal otherwise:
+Commands that open a terminal (`:MP run`, `:MP repl`, etc.) use the snacks.nvim terminal when it is installed, and a floating built-in Neovim terminal otherwise. The built-in terminal stays open if the command fails so you can read the error:
 
 | Key | Mode | Action |
 |-----|------|--------|

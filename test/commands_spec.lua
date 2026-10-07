@@ -24,15 +24,15 @@ describe('micropython_nvim.commands', function()
     end
   end
 
-  describe('register', function()
-    it('should make a new subcommand dispatchable and completable', function()
+  describe('subcommands', function()
+    it('should make a new entry dispatchable and completable', function()
       local received
-      Commands.register('flash', {
+      Commands.subcommands.flash = {
         desc = 'Flash firmware',
         impl = function(args)
           received = args
         end,
-      })
+      }
 
       Commands.dispatch({ 'flash', 'esp32' })
 
@@ -124,7 +124,7 @@ describe('micropython_nvim.commands', function()
     end)
 
     it("should delegate argument completion to the subcommand's completer", function()
-      Commands.register('flash', {
+      Commands.subcommands.flash = {
         desc = 'Flash firmware',
         impl = function() end,
         complete = function(arglead)
@@ -132,7 +132,7 @@ describe('micropython_nvim.commands', function()
             return vim.startswith(board, arglead)
           end, { 'esp32', 'rp2' })
         end,
-      })
+      }
       assert.same({ 'esp32' }, Commands.complete('e', 'MP flash e', 10))
     end)
   end)

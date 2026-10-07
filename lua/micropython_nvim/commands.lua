@@ -13,7 +13,7 @@ local function _facade(name)
   end
 end
 
----All :MP subcommands. New features register here (or via M.register).
+---All :MP subcommands. New features add an entry here.
 ---@type table<string, MicroPython.Subcommand>
 M.subcommands = {
   run = { desc = 'Run current buffer on the device', impl = _facade('run') },
@@ -67,12 +67,6 @@ M.LEGACY_ALIASES = {
   MPSetStubs = 'set_stubs',
   MPListDevices = 'list_devices',
 }
-
----@param name string
----@param subcommand MicroPython.Subcommand
-function M.register(name, subcommand)
-  M.subcommands[name] = subcommand
-end
 
 ---@return string[]
 function M.names()

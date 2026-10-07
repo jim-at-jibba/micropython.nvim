@@ -104,7 +104,7 @@ end)
 ### Code Style
 - Formatter: stylua (100 char line width, 2 space indent, AutoPreferSingle quotes)
 - Use `local M = {}` module pattern, return `M` at end
-- Use `vim.ui.select` for user interaction
+- Use `require('micropython_nvim.ui').select` for user interaction (snacks picker or `vim.ui.select`)
 - Use `vim.notify` with `vim.log.levels` and `{ title = "micropython.nvim" }`
 - Template strings using `[[...]]` for multi-line content
 
@@ -166,7 +166,7 @@ local M = {}
 
 function M.setup(opts)
   require("micropython_nvim.config").setup(opts)
-  require("micropython_nvim.utils").read_ampy_config()
+  require("micropython_nvim.utils").read_config()
 end
 
 function M.run()
@@ -244,10 +244,10 @@ Do not add new `:MPxxx` commands; `LEGACY_ALIASES` is only for pre-v3 names.
 - Async operations: Use `Mpremote.run(args, { name, on_exit })`
 - File operations: Use `vim.fn` functions for file I/O in user-facing code, `io.*` for internals
 - Project root: All operations assume Neovim opened at project root
-- Config sync: Update both config module state and `.ampy` file
+- Config sync: Update both config module state and `.micropython` file
 
 ## Safety
-- Always validate user input in `vim.ui.select` callbacks (check for `nil`)
+- Always validate user input in `UI.select` callbacks (check for `nil`)
 - Use `2>&1` in terminal commands to capture errors
 - Verify file readability with `vim.fn.filereadable()` before operations
 - Handle `nil` returns from file operations gracefully

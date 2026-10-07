@@ -1,14 +1,6 @@
-local M = {}
+local Utils = require('micropython_nvim.utils')
 
----@return table|nil snacks
-local function _snacks()
-  local snacks = rawget(_G, 'Snacks')
-  if snacks then
-    return snacks
-  end
-  local ok, mod = pcall(require, 'snacks')
-  return ok and mod or nil
-end
+local M = {}
 
 ---@param buf integer
 ---@return integer win
@@ -44,8 +36,11 @@ local function _builtin_terminal(command)
   end
 
   local job_opts = {
-    on_exit = function()
-      vim.schedule(close)
+    -- Keep a failed command's output visible; q closes it
+    on_exit = function(_, code)
+      if code == 0 then
+        vim.schedule(close)
+      end
     end,
   }
   if vim.fn.has('nvim-0.11') == 1 then
@@ -63,7 +58,7 @@ end
 ---Open a shell command in a terminal: snacks.nvim when installed, otherwise built-in
 ---@param command string
 function M.open(command)
-  local snacks = _snacks()
+  local snacks = Utils.get_snacks()
   if snacks and snacks.terminal then
     snacks.terminal(command)
     return
