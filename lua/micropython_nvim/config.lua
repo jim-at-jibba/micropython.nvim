@@ -5,6 +5,7 @@
 ---@field port? string Device port (e.g., "/dev/ttyUSB0", "auto", or "id:<serial>")
 ---@field baud? number Baud rate for serial communication (optional, mpremote auto-detects)
 ---@field debug? boolean Enable debug logging
+---@field upload_on_save? boolean Upload project files to the device when written (default false)
 ---@field ui? MicroPython.UIConfig UI configuration (requires snacks.nvim)
 
 ---@class MicroPython.State
@@ -19,6 +20,7 @@ local defaults = {
   port = 'auto',
   baud = 115200,
   debug = false,
+  upload_on_save = false,
   ui = {
     picker_layout = 'select',
   },

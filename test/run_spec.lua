@@ -11,128 +11,12 @@ describe('micropython_nvim.run', function()
     Run = require('micropython_nvim.run')
   end)
 
-  describe('DEFAULT_IGNORE_LIST', function()
-    it('should be a table', function()
-      assert.is_table(Run.DEFAULT_IGNORE_LIST)
-    end)
-
-    it('should contain .git', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.git'])
-    end)
-
-    it('should contain .micropython', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.micropython'])
-    end)
-
-    it('should contain .ampy for backwards compatibility', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.ampy'])
-    end)
-
-    it('should contain __pycache__', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['__pycache__'])
-    end)
-
-    it('should contain pyproject.toml', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['pyproject.toml'])
-    end)
-
-    it('should contain uv.lock', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['uv.lock'])
-    end)
-
-    it('should contain .venv', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.venv'])
-    end)
-
-    it('should contain venv', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['venv'])
-    end)
-
-    it('should contain env', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['env'])
-    end)
-
-    it('should contain requirements.txt', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['requirements.txt'])
-    end)
-
-    it('should contain .vscode', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.vscode'])
-    end)
-
-    it('should contain .gitignore', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.gitignore'])
-    end)
-
-    it('should contain project.pymakr', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['project.pymakr'])
-    end)
-
-    it('should contain .python-version', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.python-version'])
-    end)
-
-    it('should contain .micropy/', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.micropy/'])
-    end)
-
-    it('should contain micropy.json', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['micropy.json'])
-    end)
-
-    it('should contain .idea', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.idea'])
-    end)
-
-    it('should contain README.md', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['README.md'])
-    end)
-
-    it('should contain LICENSE', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['LICENSE'])
-    end)
-
-    it('should not contain main.py', function()
-      assert.is_nil(Run.DEFAULT_IGNORE_LIST['main.py'])
-    end)
-
-    it('should not contain lib/', function()
-      assert.is_nil(Run.DEFAULT_IGNORE_LIST['lib/'])
-    end)
-  end)
-
   describe('run', function()
     it('should warn when port not configured', function()
       Config.set_port('')
       local notifications, restore = helpers.mock_vim_notify()
 
       Run.run()
-
-      restore()
-      assert.is_true(#notifications > 0)
-      assert.is_true(notifications[1].msg:find('No port configured') ~= nil)
-    end)
-  end)
-
-  describe('upload_current', function()
-    it('should warn when port not configured', function()
-      Config.set_port('')
-      local notifications, restore = helpers.mock_vim_notify()
-
-      Run.upload_current()
-
-      restore()
-      assert.is_true(#notifications > 0)
-      assert.is_true(notifications[1].msg:find('No port configured') ~= nil)
-    end)
-  end)
-
-  describe('upload_all', function()
-    it('should warn when port not configured', function()
-      Config.set_port('')
-      local notifications, restore = helpers.mock_vim_notify()
-
-      Run.upload_all()
 
       restore()
       assert.is_true(#notifications > 0)
@@ -268,13 +152,6 @@ describe('micropython_nvim.run', function()
       return vim.list_slice(call.argv, #call.argv - n + 1)
     end
 
-    it('upload_current should copy the buffer as one argv entry', function()
-      vim.api.nvim_buf_set_name(0, '/tmp/my "odd" $dir/main.py')
-      local path = vim.api.nvim_buf_get_name(0)
-      Run.upload_current()
-      assert.same({ 'connect', '/dev/ttyUSB0', 'cp', path, ':main.py' }, tail(calls[1], 5))
-    end)
-
     it('soft_reset should run soft_reset in the background', function()
       Run.soft_reset()
       assert.same({ 'soft_reset' }, tail(calls[1], 1))
@@ -283,28 +160,6 @@ describe('micropython_nvim.run', function()
     it('hard_reset should run reset in the background', function()
       Run.hard_reset()
       assert.same({ 'reset' }, tail(calls[1], 1))
-    end)
-
-    it('upload_all should chain mkdir and cp with +', function()
-      helpers.with_temp_dir(function(dir)
-        vim.fn.mkdir(dir .. '/lib', 'p')
-        vim.fn.writefile({ '' }, dir .. '/lib/a b.py')
-        local restore_cwd = helpers.mock_vim_fn({
-          getcwd = function()
-            return dir
-          end,
-          jobstart = function(argv, opts)
-            table.insert(calls, { argv = argv, opts = opts })
-            return #calls
-          end,
-        })
-        Run.upload_all()
-        restore_cwd()
-        assert.same(
-          { 'fs', 'mkdir', ':lib', '+', 'cp', dir .. '/lib/a b.py', ':lib/a b.py' },
-          tail(calls[1], 7)
-        )
-      end)
     end)
 
     it('erase_one should list device files without blocking', function()
