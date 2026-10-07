@@ -5,9 +5,9 @@ local M = {}
 ---@param on_choice fun(choice: string|nil)
 function M.select(items, opts, on_choice)
   local Config = require('micropython_nvim.config')
-  local ok, snacks = pcall(require, 'snacks')
+  local snacks = require('micropython_nvim.utils').get_snacks()
 
-  if ok and snacks.picker then
+  if snacks and snacks.picker then
     local picker_items = {}
     for _, item in ipairs(items) do
       table.insert(picker_items, { text = item })
