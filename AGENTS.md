@@ -22,7 +22,7 @@ lua/
     device.lua         # Board detection, device info (firmware, board, storage, clock) and mip installs
     upload.lua         # Upload files (keeping project paths) and upload on save
     files.lua          # Device file browser and mp://<path> buffers
-    setup.lua          # Configure port, baud, stubs
+    setup.lua          # Configure port, stubs
     stubs.lua          # Stub suggestions (PyPI-checked), typings install, pyright config
     flash.lua          # Firmware flashing with mpflash: version picker, serial port resolution
     repl.lua           # Persistent REPL split: send line/selection/buffer, interrupt
@@ -32,7 +32,7 @@ lua/
     utils.lua          # File I/O, config, helpers
   micropython_nvim.lua # Main entry point, public API
 plugin/
-  micropython_nvim.lua # :MP command and legacy :MPxxx aliases
+  micropython_nvim.lua # :MP command and mp:// buffer autocmds
 test/
   *_spec.lua           # vusted test suites, one per module
 doc/
@@ -65,8 +65,8 @@ return M
 |------|------------|---------|
 | Functions | snake_case | `get_port`, `upload_current` |
 | Private funcs | underscore prefix | `local function _helper()` |
-| Variables | snake_case | `ampy_port`, `file_path` |
-| Constants | UPPER_CASE | `M.BAUD_RATES`, `M.DEFAULT_IGNORE_LIST` |
+| Variables | snake_case | `device_port`, `file_path` |
+| Constants | UPPER_CASE | `M.MAX_VERSIONS`, `M.DEFAULT_IGNORE_LIST` |
 | Module table | `M` | `local M = {}` |
 | Requires | PascalCase | `local Config = require(...)` |
 
@@ -77,7 +77,6 @@ Required on all public functions and classes:
 ```lua
 ---@class MicroPython.Config
 ---@field port? string Device port
----@field baud? number Baud rate
 ---@field debug? boolean Enable debug logging
 
 ---@param opts? MicroPython.Config
@@ -120,8 +119,7 @@ end)
 ```lua
 -- lua/micropython_nvim/config.lua
 local defaults = {
-  port = "/dev/ttyUSB0",
-  baud = 115200,
+  port = "auto",
   debug = false,
 }
 
@@ -136,7 +134,6 @@ end
 ```lua
 require("micropython_nvim").setup({
   port = "/dev/ttyACM0",
-  baud = 115200,
   debug = true,
 })
 ```
@@ -240,7 +237,7 @@ feature = {
 },
 ```
 
-Do not add new `:MPxxx` commands; `LEGACY_ALIASES` is only for pre-v3 names.
+`:MP` is the only user command; do not add `:MPxxx` commands.
 
 ## Conventions
 - Config state: Use `config.lua` module instead of `_G` table

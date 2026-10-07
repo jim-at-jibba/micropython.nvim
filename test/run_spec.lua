@@ -185,6 +185,59 @@ describe('micropython_nvim.run', function()
       assert.same({ 'main.py', 'lib/' }, chosen)
     end)
 
+    describe('run_main', function()
+      ---@param fn fun(dir: string)
+      local function in_project(fn)
+        helpers.with_temp_dir(function(dir)
+          local cwd = vim.fn.getcwd()
+          vim.cmd.cd(dir)
+          local ok, err = pcall(fn, vim.fn.getcwd())
+          vim.cmd.cd(cwd)
+          assert(ok, err)
+        end)
+      end
+
+      it("should run the project's local main.py", function()
+        in_project(function(dir)
+          vim.fn.writefile({ 'print("hi")' }, dir .. '/main.py')
+          Run.run_main()
+          assert.equals(1, #terminal_commands)
+          local expected = "'run' " .. vim.fn.shellescape(dir .. '/main.py')
+          assert.is_truthy(terminal_commands[1]:find(expected, 1, true))
+          assert.is_falsy(terminal_commands[1]:find('exec', 1, true))
+        end)
+      end)
+
+      it('should warn when the project has no main.py', function()
+        in_project(function()
+          local notifications, restore = helpers.mock_vim_notify()
+          Run.run_main()
+          restore()
+          assert.equals(0, #terminal_commands)
+          assert.equals(vim.log.levels.WARN, notifications[1].level)
+          assert.is_truthy(notifications[1].msg:find('main.py', 1, true))
+        end)
+      end)
+
+      it('should run main.py through the REPL when it holds the port', function()
+        local ran
+        package.loaded['micropython_nvim.repl'] = {
+          is_running = function()
+            return true
+          end,
+          run_lines = function(lines)
+            ran = lines
+          end,
+        }
+        in_project(function(dir)
+          vim.fn.writefile({ 'print("hi")' }, dir .. '/main.py')
+          Run.run_main()
+        end)
+        assert.same({ 'print("hi")' }, ran)
+        assert.equals(0, #terminal_commands)
+      end)
+    end)
+
     it('run should escape the file path for the terminal', function()
       vim.api.nvim_buf_set_name(0, "/tmp/it's here.py")
       Run.run()

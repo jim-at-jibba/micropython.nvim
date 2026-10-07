@@ -10,44 +10,6 @@ describe('micropython_nvim.setup', function()
     Setup = require('micropython_nvim.setup')
   end)
 
-  describe('BAUD_RATES', function()
-    it('should be a table', function()
-      assert.is_table(Setup.BAUD_RATES)
-    end)
-
-    it('should have multiple options', function()
-      assert.is_true(#Setup.BAUD_RATES > 0)
-    end)
-
-    it('should contain 115200', function()
-      assert.is_true(vim.tbl_contains(Setup.BAUD_RATES, '115200'))
-    end)
-
-    it('should contain 9600', function()
-      assert.is_true(vim.tbl_contains(Setup.BAUD_RATES, '19200'))
-    end)
-
-    it('should contain 1200', function()
-      assert.is_true(vim.tbl_contains(Setup.BAUD_RATES, '1200'))
-    end)
-
-    it('should contain 57600', function()
-      assert.is_true(vim.tbl_contains(Setup.BAUD_RATES, '57600'))
-    end)
-
-    it('should have all values as strings', function()
-      for _, rate in ipairs(Setup.BAUD_RATES) do
-        assert.is_string(rate)
-      end
-    end)
-
-    it('should have all values as valid numbers', function()
-      for _, rate in ipairs(Setup.BAUD_RATES) do
-        assert.is_not_nil(tonumber(rate))
-      end
-    end)
-  end)
-
   describe('set_stubs', function()
     local original_cwd
     local installed

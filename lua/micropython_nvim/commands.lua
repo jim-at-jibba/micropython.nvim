@@ -1,7 +1,7 @@
 local M = {}
 
 ---@class MicroPython.Subcommand
----@field desc string Shown in the :MP picker and used for the legacy alias description
+---@field desc string Shown in the :MP picker
 ---@field impl fun(args: string[], range?: MicroPython.Range) Called with the arguments after the subcommand name
 ---@field complete? fun(arglead: string, index: integer): string[] Completes argument `index` (1-based)
 ---@field range? boolean Accepts a line range, as in :'<,'>MP send
@@ -22,7 +22,7 @@ end
 ---@type table<string, MicroPython.Subcommand>
 M.subcommands = {
   run = { desc = 'Run current buffer on the device', impl = _facade('run') },
-  run_main = { desc = 'Run main.py on the device', impl = _facade('run_main') },
+  run_main = { desc = "Run the project's main.py on the device", impl = _facade('run_main') },
   upload = { desc = 'Upload current buffer to the device', impl = _facade('upload_current') },
   upload_all = {
     desc = 'Upload all project files (arguments are extra names to ignore)',
@@ -76,7 +76,6 @@ M.subcommands = {
   init = { desc = 'Initialise a MicroPython project', impl = _facade('init') },
   install = { desc = 'Install project dependencies with uv', impl = _facade('install') },
   set_port = { desc = 'Set the device port', impl = _facade('set_port') },
-  set_baud = { desc = 'Set the baud rate', impl = _facade('set_baud_rate') },
   set_stubs = { desc = 'Set MicroPython stubs for your board', impl = _facade('set_stubs') },
   list_devices = { desc = 'List connected MicroPython devices', impl = _facade('list_devices') },
   health = {
@@ -85,28 +84,6 @@ M.subcommands = {
       vim.cmd('checkhealth micropython_nvim')
     end,
   },
-}
-
----Pre-:MP commands, kept as aliases for their :MP subcommand
----@type table<string, string>
-M.LEGACY_ALIASES = {
-  MPRun = 'run',
-  MPRunMain = 'run_main',
-  MPUpload = 'upload',
-  MPUploadAll = 'upload_all',
-  MPRepl = 'repl',
-  MPSync = 'sync',
-  MPReset = 'reset',
-  MPHardReset = 'hard_reset',
-  MPListFiles = 'list_files',
-  MPEraseOne = 'erase',
-  MPEraseAll = 'erase_all',
-  MPInit = 'init',
-  MPInstall = 'install',
-  MPSetPort = 'set_port',
-  MPSetBaud = 'set_baud',
-  MPSetStubs = 'set_stubs',
-  MPListDevices = 'list_devices',
 }
 
 ---@return string[]

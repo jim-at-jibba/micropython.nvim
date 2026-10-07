@@ -46,10 +46,6 @@ function M.upload_all(opts)
   require('micropython_nvim.upload').upload_all(opts)
 end
 
-function M.set_baud_rate()
-  require('micropython_nvim.setup').set_baud_rate()
-end
-
 function M.set_port()
   require('micropython_nvim.setup').set_port()
 end
@@ -123,23 +119,12 @@ function M.statusline()
   if port == 'auto' then
     return ' auto'
   end
-  return ' P:' .. port .. ' BR:' .. Config.get_baud()
+  return ' P:' .. port
 end
 
 ---@return boolean
 function M.exists()
-  local Utils = require('micropython_nvim.utils')
-  return Utils.config_exists() or Utils.ampy_config_exists()
-end
-
----@deprecated Use setup() instead
-function M.initialise()
-  vim.notify(
-    'initialise() is deprecated, use setup() instead',
-    vim.log.levels.WARN,
-    { title = 'micropython.nvim' }
-  )
-  M.setup()
+  return require('micropython_nvim.utils').config_exists()
 end
 
 return M

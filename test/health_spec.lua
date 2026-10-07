@@ -171,12 +171,13 @@ describe('micropython_nvim.health', function()
     assert.is_truthy(report.msg:find(':MP init', 1, true))
   end)
 
-  it('should warn about a legacy .ampy config', function()
+  it('should not treat a v2 .ampy file as project config', function()
     local restore = fake_system({ mpremote = true }, { files = { ['.ampy'] = true } })
     Health.check()
     restore()
 
-    assert.is_not_nil(find_report('warn', '%.ampy'))
+    assert.is_nil(find_report('warn', '%.ampy'))
+    assert.is_not_nil(find_report('info', 'No project config'))
   end)
 
   it('should warn when no device is connected', function()

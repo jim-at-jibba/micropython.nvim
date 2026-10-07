@@ -123,15 +123,29 @@ function M.list_files()
   Terminal.open(command)
 end
 
+---Run the project's local main.py, as the device would at boot
 function M.run_main()
   if not Utils.check_port_configured() then
     return
   end
 
-  local command = Mpremote.command({ 'exec', "exec(open('main.py').read())" })
-    .. '; '
-    .. Utils.PRESS_ENTER_PROMPT
-  Terminal.open(command)
+  local main = Utils.get_cwd() .. '/main.py'
+  if vim.fn.filereadable(main) ~= 1 then
+    vim.notify(
+      'No main.py in ' .. Utils.get_cwd() .. '. Open Neovim at the project root.',
+      vim.log.levels.WARN,
+      { title = 'micropython.nvim' }
+    )
+    return
+  end
+
+  local Repl = require('micropython_nvim.repl')
+  if Repl.is_running() then
+    Repl.run_lines(vim.fn.readfile(main))
+    return
+  end
+
+  Terminal.open(Mpremote.command({ 'run', main }) .. '; ' .. Utils.PRESS_ENTER_PROMPT)
 end
 
 return M

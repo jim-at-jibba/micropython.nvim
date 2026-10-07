@@ -30,7 +30,9 @@ See the |micropython.nvim-micropython_nvim-quickstart| section to get started.
 
 N.B. If you open an existing project that has a `.micropython` configuration
 file in the root directory, the plugin will automatically configure the port
-and baud rate for you.
+for you.
+
+Upgrading from v2? See Migrating from v2.
 
 **IMPORTANT** This plugin assumes you are opening Neovim at the root of the
 project. Some commands will not behave in the expected way if you choose not to
@@ -43,7 +45,7 @@ GOALS                                *micropython.nvim-micropython_nvim-goals*
 - Easy multi-file project support with recursive directory upload
 - Live development with filesystem mounting
 - General file management on device
-- Easy management of port, baudrate, and other settings
+- Easy management of the device port and other settings
 - Easy project environment setup
 - Built-in REPL access
 
@@ -121,7 +123,6 @@ Options are optional; these are the defaults:
 >lua
     require("micropython_nvim").setup({
         port = "auto",          -- "auto", a port like "/dev/ttyUSB0", or "id:<serial>"
-        baud = 115200,
         debug = false,
         upload_on_save = false, -- upload project files to the device when you save them
         ui = {
@@ -182,7 +183,8 @@ CORE COMMANDS ~
   :MP run                       Run current buffer on the
                                 micro-controller
 
-  :MP run_main                  Run main.py on the device
+  :MP run_main                  Run the project’s main.py on the device,
+                                without uploading it
 
   :MP upload                    Upload current buffer to the same
                                 project-relative path on the device
@@ -245,41 +247,12 @@ SETUP COMMANDS ~
 
   :MP set_port                  Set the device port
 
-  :MP set_baud                  Set the baud rate (optional, mpremote
-                                auto-detects)
-
   :MP set_stubs                 Switch the project’s stubs (the connected
                                 board is suggested first)
 
   :MP list_devices              List connected MicroPython devices
 
   :MP health                    Run :checkhealth micropython_nvim
-  -----------------------------------------------------------------------
-
-LEGACY COMMANDS ~
-
-The previous `:MPxxx` commands still work as aliases:
-
-  -----------------------------------------------------------------------
-  Legacy                      Use instead
-  --------------------------- -------------------------------------------
-  :MPRun / :MPRunMain         :MP run / :MP run_main
-
-  :MPUpload / :MPUploadAll    :MP upload / :MP upload_all
-
-  :MPRepl / :MPSync           :MP repl / :MP sync
-
-  :MPReset / :MPHardReset     :MP reset / :MP hard_reset
-
-  :MPListFiles /              :MP list_files / :MP list_devices
-  :MPListDevices
-
-  :MPEraseOne / :MPEraseAll   :MP erase / :MP erase_all
-
-  :MPInit / :MPInstall        :MP init / :MP install
-
-  :MPSetPort / :MPSetBaud /   :MP set_port / :MP set_baud / :MP set_stubs
-  :MPSetStubs
   -----------------------------------------------------------------------
 
 HEALTH CHECK ~
@@ -523,7 +496,6 @@ The `.micropython` file stores project configuration:
 
 >
     PORT=auto
-    BAUD=115200
 <
 
 Port options: - `auto` - Auto-detect first USB serial port - `/dev/ttyUSB0` -
@@ -540,7 +512,7 @@ Key features for multi-file projects:
 - `:MP upload_all` uploads nested folders and skips unchanged files
 - `upload_on_save = true` uploads each file as you save it
 - `:MP sync` mounts local directory for live development
-- `:MP run_main` runs main.py after upload
+- `:MP run_main` runs your local main.py without uploading it
 
 
 LIVE DEVELOPMENT WITH :MP SYNC ~
