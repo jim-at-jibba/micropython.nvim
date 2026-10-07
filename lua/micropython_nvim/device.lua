@@ -10,6 +10,12 @@ local M = {}
 ---@field storage? { total: integer, free: integer } Bytes on the root filesystem
 ---@field time? string Device clock, YYYY-MM-DD HH:MM:SS
 
+---@class MicroPython.Board
+---@field platform? string sys.platform, e.g. "rp2", "esp32", "pyboard"
+---@field build? string Firmware build, e.g. "RPI_PICO_W" (MicroPython 1.22+)
+---@field machine? string e.g. "Raspberry Pi Pico W with RP2040"
+---@field version? string Release version, e.g. "1.24.1"; nil for preview builds
+
 -- Prints one tab-separated line per field, so the output can be parsed reliably
 local INFO_SCRIPT = [[
 import os, time
@@ -25,6 +31,16 @@ try:
     print('time\t%04d-%02d-%02d %02d:%02d:%02d' % time.localtime()[:6])
 except Exception:
     pass
+]]
+
+-- Prints one tab-separated line per field, so the output can be parsed reliably
+local DETECT_SCRIPT = [[
+import os, sys
+v = sys.implementation.version
+print('platform\t' + sys.platform)
+print('build\t' + getattr(sys.implementation, '_build', ''))
+print('machine\t' + os.uname().machine)
+print('version\t%d.%d.%d\t%s' % (v[0], v[1], v[2], v[3] if len(v) > 3 else ''))
 ]]
 
 -- Common micropython-lib packages offered by :MP mip completion and its picker
@@ -75,6 +91,40 @@ function M.parse_info(output)
     end
   end
   return info
+end
+
+---Parse the output of the detection script
+---@param output string
+---@return MicroPython.Board
+function M.parse_board(output)
+  local board = {}
+  for line in vim.gsplit(output, '\n') do
+    local fields = vim.split((line:gsub('\r$', '')), '\t')
+    local key, value = fields[1], fields[2]
+    if key == 'version' then
+      if value and value:match('^%d+%.%d+%.%d+$') and (fields[3] or '') == '' then
+        board.version = value
+      end
+    elseif (key == 'platform' or key == 'build' or key == 'machine') and value and value ~= '' then
+      board[key] = value
+    end
+  end
+  return board
+end
+
+---Detect the connected board; nil when no port is configured or MicroPython does not answer
+---@param on_board fun(board?: MicroPython.Board)
+function M.detect(on_board)
+  if not Config.is_port_configured() then
+    on_board(nil)
+    return
+  end
+  Mpremote.run({ 'exec', DETECT_SCRIPT }, {
+    on_exit = function(result)
+      Utils.debug_print('board detection: ' .. vim.inspect(result))
+      on_board(result.code == 0 and M.parse_board(result.stdout) or nil)
+    end,
+  })
 end
 
 ---@param bytes integer

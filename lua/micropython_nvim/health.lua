@@ -77,8 +77,8 @@ local function _check_mpflash()
     vim.health.ok(_version({ 'mpflash', '--version' }))
   else
     vim.health.info(
-      'mpflash not found (optional, for flashing firmware). '
-        .. 'Install with: uv tool install mpflash (or: pip install mpflash)'
+      'mpflash not found (optional, for :MP flash). '
+        .. require('micropython_nvim.flash').INSTALL_HINT
     )
   end
 end

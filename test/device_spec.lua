@@ -11,6 +11,13 @@ describe('micropython_nvim.device', function()
     'time\t2021-01-01 00:00:12',
   }, '\n')
 
+  local PICO_W_OUTPUT = table.concat({
+    'platform\trp2',
+    'build\tRPI_PICO_W',
+    'machine\tRaspberry Pi Pico W with RP2040',
+    'version\t1.24.1\t',
+  }, '\r\n')
+
   before_each(function()
     helpers.reset_modules()
     Config = require('micropython_nvim.config')
@@ -38,6 +45,22 @@ describe('micropython_nvim.device', function()
         { board = 'ESP32 module with ESP32' },
         Device.parse_info('noise\r\nboard\tESP32 module with ESP32\r\n')
       )
+    end)
+  end)
+
+  describe('parse_board', function()
+    it('should read platform, build, machine and version', function()
+      assert.same({
+        platform = 'rp2',
+        build = 'RPI_PICO_W',
+        machine = 'Raspberry Pi Pico W with RP2040',
+        version = '1.24.1',
+      }, Device.parse_board(PICO_W_OUTPUT))
+    end)
+
+    it('should leave out a preview version and an empty build', function()
+      local board = Device.parse_board('platform\tesp32\nbuild\t\nversion\t1.25.0\tpreview\n')
+      assert.same({ platform = 'esp32' }, board)
     end)
   end)
 

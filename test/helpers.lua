@@ -17,6 +17,7 @@ function M.reset_modules()
   package.loaded['micropython_nvim.files'] = nil
   package.loaded['micropython_nvim.device'] = nil
   package.loaded['micropython_nvim.stubs'] = nil
+  package.loaded['micropython_nvim.flash'] = nil
 end
 
 function M.mock_vim_fn(overrides)

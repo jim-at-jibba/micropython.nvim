@@ -107,6 +107,11 @@ function M.mip(args)
   require('micropython_nvim.device').mip(args)
 end
 
+---@param args string[] an optional firmware version
+function M.flash(args)
+  require('micropython_nvim.flash').flash(args)
+end
+
 function M.run_main()
   require('micropython_nvim.run').run_main()
 end

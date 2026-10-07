@@ -29,22 +29,6 @@ describe('micropython_nvim.stubs', function()
     end)
   end)
 
-  describe('parse_board', function()
-    it('should read platform, build, machine and version', function()
-      assert.same({
-        platform = 'rp2',
-        build = 'RPI_PICO_W',
-        machine = 'Raspberry Pi Pico W with RP2040',
-        version = '1.24.1',
-      }, Stubs.parse_board(PICO_W_OUTPUT))
-    end)
-
-    it('should leave out a preview version and an empty build', function()
-      local board = Stubs.parse_board('platform\tesp32\nbuild\t\nversion\t1.25.0\tpreview\n')
-      assert.same({ platform = 'esp32' }, board)
-    end)
-  end)
-
   describe('packages_for', function()
     local function packages(platform, build)
       return Stubs.packages_for({ platform = platform, build = build })

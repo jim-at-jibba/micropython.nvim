@@ -1,24 +1,9 @@
 local Config = require('micropython_nvim.config')
+local Device = require('micropython_nvim.device')
 local Mpremote = require('micropython_nvim.mpremote')
 local Utils = require('micropython_nvim.utils')
 
 local M = {}
-
----@class MicroPython.Board
----@field platform? string sys.platform, e.g. "rp2", "esp32", "pyboard"
----@field build? string Firmware build, e.g. "RPI_PICO_W" (MicroPython 1.22+)
----@field machine? string e.g. "Raspberry Pi Pico W with RP2040"
----@field version? string Release version, e.g. "1.24.1"; nil for preview builds
-
--- Prints one tab-separated line per field, so the output can be parsed reliably
-local DETECT_SCRIPT = [[
-import os, sys
-v = sys.implementation.version
-print('platform\t' + sys.platform)
-print('build\t' + getattr(sys.implementation, '_build', ''))
-print('machine\t' + os.uname().machine)
-print('version\t%d.%d.%d\t%s' % (v[0], v[1], v[2], v[3] if len(v) > 3 else ''))
-]]
 
 -- Stub packages offered when picking manually (all published on PyPI)
 M.PACKAGES = {
@@ -81,25 +66,6 @@ M.PYRIGHT_CONFIG = string.format(
 ---@param level integer
 local function _notify(msg, level)
   vim.notify(msg, level, { title = 'micropython.nvim' })
-end
-
----Parse the output of the detection script
----@param output string
----@return MicroPython.Board
-function M.parse_board(output)
-  local board = {}
-  for line in vim.gsplit(output, '\n') do
-    local fields = vim.split((line:gsub('\r$', '')), '\t')
-    local key, value = fields[1], fields[2]
-    if key == 'version' then
-      if value and value:match('^%d+%.%d+%.%d+$') and (fields[3] or '') == '' then
-        board.version = value
-      end
-    elseif (key == 'platform' or key == 'build' or key == 'machine') and value and value ~= '' then
-      board[key] = value
-    end
-  end
-  return board
 end
 
 ---Stub packages for a board, most specific first: the board package, then the port package
@@ -176,41 +142,12 @@ function M.declare(requirement)
   return vim.fn.writefile(lines, declared.path) == 0
 end
 
----Run a command, collecting its output
----@param argv string[]
----@param opts { cwd?: string }
----@param on_exit fun(result: MicroPython.MpremoteResult)
-local function _job(argv, opts, on_exit)
-  local stdout, stderr = {}, {}
-  local ok, job = pcall(vim.fn.jobstart, argv, {
-    cwd = opts.cwd,
-    stdout_buffered = true,
-    stderr_buffered = true,
-    on_stdout = function(_, data)
-      stdout = data
-    end,
-    on_stderr = function(_, data)
-      stderr = data
-    end,
-    on_exit = function(_, code)
-      on_exit({
-        code = code,
-        stdout = vim.trim(table.concat(stdout, '\n')),
-        stderr = vim.trim(table.concat(stderr, '\n')),
-      })
-    end,
-  })
-  if not ok or job <= 0 then
-    on_exit({ code = -1, stdout = '', stderr = argv[1] .. ' could not be started' })
-  end
-end
-
 ---Releases of a package on PyPI, as MicroPython versions
 ---@param package string
 ---@param on_versions fun(versions: table<string, true>|false|nil) false: not on PyPI, nil: unknown
 local function _pypi_versions(package, on_versions)
   local url = 'https://pypi.org/pypi/' .. package .. '/json'
-  _job({ 'curl', '-sSfL', '--max-time', '10', url }, {}, function(result)
+  Utils.run_job({ 'curl', '-sSfL', '--max-time', '10', url }, {}, function(result)
     if result.code ~= 0 then
       if result.stderr:find('404', 1, true) then
         on_versions(false)
@@ -235,24 +172,10 @@ local function _pypi_versions(package, on_versions)
   end)
 end
 
----@param on_board fun(board?: MicroPython.Board)
-local function _detect(on_board)
-  if not Config.is_port_configured() then
-    on_board(nil)
-    return
-  end
-  Mpremote.run({ 'exec', DETECT_SCRIPT }, {
-    on_exit = function(result)
-      Utils.debug_print('board detection: ' .. vim.inspect(result))
-      on_board(result.code == 0 and M.parse_board(result.stdout) or nil)
-    end,
-  })
-end
-
 ---Stub requirements matching the connected board, checked against PyPI
 ---@param on_suggestions fun(suggestions: string[], board?: MicroPython.Board)
 function M.suggest(on_suggestions)
-  _detect(function(board)
+  Device.detect(function(board)
     local packages = board and M.packages_for(board) or {}
     if #packages == 0 then
       on_suggestions({}, board)
@@ -424,16 +347,20 @@ function M.install(requirement, on_done)
 
   _remove_installed_stubs(cwd .. '/' .. TYPINGS)
   _notify(string.format('Installing %s into %s/...', requirement, TYPINGS), vim.log.levels.INFO)
-  _job({ 'uv', 'pip', 'install', '--target', TYPINGS, requirement }, { cwd = cwd }, function(result)
-    if result.code == 0 then
-      _notify('Installed ' .. requirement, vim.log.levels.INFO)
-    else
-      _notify('Installing stubs failed:\n' .. Mpremote.error_output(result), vim.log.levels.ERROR)
+  Utils.run_job(
+    { 'uv', 'pip', 'install', '--target', TYPINGS, requirement },
+    { cwd = cwd },
+    function(result)
+      if result.code == 0 then
+        _notify('Installed ' .. requirement, vim.log.levels.INFO)
+      else
+        _notify('Installing stubs failed:\n' .. Mpremote.error_output(result), vim.log.levels.ERROR)
+      end
+      if on_done then
+        on_done(result.code == 0)
+      end
     end
-    if on_done then
-      on_done(result.code == 0)
-    end
-  end)
+  )
 end
 
 return M
