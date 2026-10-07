@@ -205,6 +205,7 @@ describe('micropython_nvim.run', function()
           local expected = "'run' " .. vim.fn.shellescape(dir .. '/main.py')
           assert.is_truthy(terminal_commands[1]:find(expected, 1, true))
           assert.is_falsy(terminal_commands[1]:find('exec', 1, true))
+          assert.is_truthy(terminal_commands[1]:find('2>&1', 1, true))
         end)
       end)
 

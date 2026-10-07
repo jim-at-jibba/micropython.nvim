@@ -346,9 +346,4 @@ function M.run_lines(lines)
   end
 end
 
----Stop whatever is running and run the current buffer in the REPL
-function M.run_buffer()
-  M.run_lines(vim.api.nvim_buf_get_lines(0, 0, -1, false))
-end
-
 return M

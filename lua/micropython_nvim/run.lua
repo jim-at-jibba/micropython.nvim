@@ -35,21 +35,25 @@ local function _get_device_files(on_files)
   })
 end
 
+---Run a local file on the device
+---@param path string
+---@param lines string[] The file's code, sent to the REPL when it is open
+local function _run_file(path, lines)
+  -- The REPL holds the serial port, so run through it when it is open
+  local Repl = require('micropython_nvim.repl')
+  if Repl.is_running() then
+    Repl.run_lines(lines)
+    return
+  end
+
+  Terminal.open(Mpremote.command({ 'run', path }) .. ' 2>&1; ' .. Utils.PRESS_ENTER_PROMPT)
+end
+
 function M.run()
   if not Utils.check_port_configured() then
     return
   end
-
-  -- The REPL holds the serial port, so run through it when it is open
-  local Repl = require('micropython_nvim.repl')
-  if Repl.is_running() then
-    Repl.run_buffer()
-    return
-  end
-
-  local file_path = vim.api.nvim_buf_get_name(0)
-  local command = Mpremote.command({ 'run', file_path }) .. '; ' .. Utils.PRESS_ENTER_PROMPT
-  Terminal.open(command)
+  _run_file(vim.api.nvim_buf_get_name(0), vim.api.nvim_buf_get_lines(0, 0, -1, false))
 end
 
 function M.sync()
@@ -139,13 +143,7 @@ function M.run_main()
     return
   end
 
-  local Repl = require('micropython_nvim.repl')
-  if Repl.is_running() then
-    Repl.run_lines(vim.fn.readfile(main))
-    return
-  end
-
-  Terminal.open(Mpremote.command({ 'run', main }) .. '; ' .. Utils.PRESS_ENTER_PROMPT)
+  _run_file(main, vim.fn.readfile(main))
 end
 
 return M

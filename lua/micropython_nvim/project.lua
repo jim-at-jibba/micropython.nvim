@@ -115,7 +115,7 @@ local function _prompt_uv_sync(cwd)
   end
 end
 
-local function _check_legacy_files()
+local function _warn_requirements_txt()
   if Utils.requirements_exists() then
     vim.notify(
       'Found legacy requirements.txt. Consider removing after migration.',
@@ -158,7 +158,7 @@ local function _create_project_files(stubs)
     _write_file_safe(file.path, file.content)
   end
 
-  _check_legacy_files()
+  _warn_requirements_txt()
 
   vim.notify('Project created with ' .. stubs, vim.log.levels.INFO, { title = 'micropython.nvim' })
 

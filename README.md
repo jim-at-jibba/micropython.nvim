@@ -164,7 +164,7 @@ All commands live under a single `:MP` command with tab completion: type `:MP <T
 | Command | Description |
 |---------|-------------|
 | `:MP run` | Run current buffer on the micro-controller |
-| `:MP run_main` | Run the project's `main.py` on the device, without uploading it |
+| `:MP run_main` | Run the project's `main.py` on the device (modules it imports come from the device) |
 | `:MP upload` | Upload current buffer to the same project-relative path on the device |
 | `:MP upload_all` | Upload all project files, keeping folders (unchanged files are skipped) |
 | `:MP repl` | Open or focus the REPL split |
@@ -407,7 +407,7 @@ Key features for multi-file projects:
 - `:MP upload_all` uploads nested folders and skips unchanged files
 - `upload_on_save = true` uploads each file as you save it
 - `:MP sync` mounts local directory for live development
-- `:MP run_main` runs your local main.py without uploading it
+- `:MP run_main` runs your local main.py; upload `lib/` first so its imports resolve
 
 ### Live Development with `:MP sync`
 
@@ -444,7 +444,9 @@ require("lualine").setup({
 ```
 
 <!-- panvimdoc-ignore-start -->
+
 <img width="1080" alt="image" src="./assets/status.png">
+
 <!-- panvimdoc-ignore-end -->
 
 ## Migrating from v2
@@ -476,14 +478,24 @@ can be deleted. The statusline shows only the port.
 
 ### `.ampy` files
 
-`.ampy` files are no longer read. Create a `.micropython` file with the port from `AMPY_PORT`, for
-example `PORT=/dev/ttyACM0` (or `PORT=auto`), then delete `.ampy`.
+`.ampy` files are no longer read, so a project with only `.ampy` is no longer a MicroPython
+project: `exists()` (the statusline condition) is false and upload on save is off. Create a
+`.micropython` file with the port from `AMPY_PORT`, for example `PORT=/dev/ttyACM0` (or
+`PORT=auto`), restart Neovim to load it, then delete `.ampy`. (`:MP init` also creates
+`.micropython`, but it overwrites `main.py`, `pyproject.toml` and the other project files.)
 
 ### `:MP run_main`
 
 `:MP run_main` now runs the `main.py` in your project, like `:MP run` on that file. v2 ran the copy
-on the device. To run the device's `main.py`, use `:MP reset`: MicroPython runs `main.py` after a
-soft reset.
+on the device. Modules it imports, such as `lib/`, still come from the device, so upload them first
+(`:MP upload_all`). To run the device's `main.py`, use `:MP reset`: MicroPython runs `main.py`
+after a soft reset.
+
+### Uploads keep project paths
+
+`:MP upload` uploads a file to the same project-relative path on the device: `lib/led.py` goes to
+`:lib/led.py`. v2 uploaded every file to the device root by its name. Imports that relied on that,
+like `import led` for `lib/led.py`, need the folder (`from lib import led`) or a flat project.
 
 ### Removed Lua functions
 
@@ -491,6 +503,7 @@ soft reset.
 - `set_baud_rate()`
 - The `.ampy` helpers in `micropython_nvim.utils` (`get_ampy_path`, `ampy_config_exists`,
   `read_ampy_config`, `ampy_install_check`) and `get_mpremote_base()`
+- `get_baud()`, `set_baud()` and `get_connect_arg()` in `micropython_nvim.config`
 
 ## Examples
 
