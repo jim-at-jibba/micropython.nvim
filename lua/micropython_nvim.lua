@@ -72,6 +72,10 @@ function M.list_files()
   require('micropython_nvim.run').list_files()
 end
 
+function M.files()
+  require('micropython_nvim.files').open()
+end
+
 function M.run_main()
   require('micropython_nvim.run').run_main()
 end

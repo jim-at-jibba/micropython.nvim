@@ -105,6 +105,7 @@ describe('micropython_nvim.commands', function()
         'reset',
         'hard_reset',
         'list_files',
+        'files',
         'erase',
         'erase_all',
         'init',

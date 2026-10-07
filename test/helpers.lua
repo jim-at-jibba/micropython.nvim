@@ -14,6 +14,7 @@ function M.reset_modules()
   package.loaded['micropython_nvim.terminal'] = nil
   package.loaded['micropython_nvim.health'] = nil
   package.loaded['micropython_nvim.upload'] = nil
+  package.loaded['micropython_nvim.files'] = nil
 end
 
 function M.mock_vim_fn(overrides)
