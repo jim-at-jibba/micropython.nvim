@@ -239,4 +239,69 @@ describe('micropython_nvim.mpremote', function()
       assert.is_truthy(notifications[1].msg:find('uv sync', 1, true))
     end)
   end)
+  describe('run_sync', function()
+    it('should return the result once the job exits', function()
+      local restore = helpers.mock_vim_fn({
+        jobstart = function(_, opts)
+          vim.defer_fn(function()
+            opts.on_stdout(1, { 'mpremote 1.24.1', '' })
+            opts.on_stderr(1, { '' })
+            opts.on_exit(1, 0)
+          end, 10)
+          return 1
+        end,
+      })
+      local result = Mpremote.run_sync({ 'version' }, { connect = false })
+      restore()
+      assert.same({ code = 0, stdout = 'mpremote 1.24.1', stderr = '' }, result)
+    end)
+
+    it('should stop the job and report a timeout', function()
+      local stopped
+      local restore = helpers.mock_vim_fn({
+        jobstart = function()
+          return 7
+        end,
+        jobstop = function(id)
+          stopped = id
+        end,
+      })
+      local result = Mpremote.run_sync({ 'connect', 'list' }, { connect = false }, 20)
+      restore()
+      assert.equals(-1, result.code)
+      assert.is_truthy(result.stderr:find('timed out', 1, true))
+      assert.equals(7, stopped)
+    end)
+
+    it('should return immediately when mpremote cannot start', function()
+      local restore = helpers.mock_vim_fn({
+        jobstart = function()
+          return -1
+        end,
+      })
+      local result = Mpremote.run_sync({ 'version' })
+      restore()
+      assert.equals(-1, result.code)
+      assert.is_truthy(result.stderr:find('not found', 1, true))
+    end)
+  end)
+
+  describe('parse_device_list', function()
+    it('should parse port, serial and manufacturer', function()
+      local devices = Mpremote.parse_device_list(
+        '/dev/cu.usbmodem101 e6614c311b7e6f35 2e8a:0005 MicroPython Board\n'
+          .. '/dev/cu.Bluetooth-Incoming-Port None 0000:0000 None None\n'
+      )
+      assert.equals(2, #devices)
+      assert.same({
+        port = '/dev/cu.usbmodem101',
+        serial = 'e6614c311b7e6f35',
+        manufacturer = '2e8a:0005 MicroPython Board',
+      }, devices[1])
+    end)
+
+    it('should return nothing for empty output', function()
+      assert.same({}, Mpremote.parse_device_list(''))
+    end)
+  end)
 end)

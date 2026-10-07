@@ -50,9 +50,12 @@ N.B. If you open an existing project that has a `.micropython` configuration fil
 ## Requirements
 
 - [Neovim >= 0.9](https://github.com/neovim/neovim/releases/tag/v0.9.0)
-- [snacks.nvim](https://github.com/folke/snacks.nvim)
 - [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html)
 - [uv](https://docs.astral.sh/uv/) (for dependency management, Unix-only)
+- Optional: [snacks.nvim](https://github.com/folke/snacks.nvim) for nicer terminals and pickers. Without it the plugin uses Neovim's built-in terminal and `vim.ui.select`.
+- Optional: [mpflash](https://github.com/Josverl/mpflash) for flashing firmware
+
+Run `:checkhealth micropython_nvim` (or `:MP health`) to check your setup.
 
 ## Installation
 
@@ -80,7 +83,7 @@ pip install mpremote
 ```lua
 {
     "jim-at-jibba/micropython.nvim",
-    dependencies = { "folke/snacks.nvim" },
+    dependencies = { "folke/snacks.nvim" }, -- optional
 }
 ```
 
@@ -92,7 +95,7 @@ pip install mpremote
 ```lua
 use {
     "jim-at-jibba/micropython.nvim",
-    requires = { "folke/snacks.nvim" },
+    requires = { "folke/snacks.nvim" }, -- optional
 }
 ```
 
@@ -116,46 +119,68 @@ vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
 
 ## Usage
 
+All commands live under a single `:MP` command with tab completion: type `:MP <Tab>` to see them. Running `:MP` on its own opens a picker.
+
 ### Core Commands
 
 | Command | Description |
 |---------|-------------|
-| `:MPRun` | Run current buffer on the micro-controller |
-| `:MPRunMain` | Run main.py on the device |
-| `:MPUpload` | Upload current buffer to the micro-controller |
-| `:MPUploadAll` | Upload all project files (recursive) |
-| `:MPRepl` | Open MicroPython REPL |
+| `:MP run` | Run current buffer on the micro-controller |
+| `:MP run_main` | Run main.py on the device |
+| `:MP upload` | Upload current buffer to the micro-controller |
+| `:MP upload_all` | Upload all project files (recursive) |
+| `:MP repl` | Open MicroPython REPL |
 
 ### Development Commands
 
 | Command | Description |
 |---------|-------------|
-| `:MPSync` | Mount local directory on device for live development |
-| `:MPReset` | Soft reset the device |
-| `:MPHardReset` | Hard reset the device |
+| `:MP sync` | Mount local directory on device for live development |
+| `:MP reset` | Soft reset the device |
+| `:MP hard_reset` | Hard reset the device |
 
 ### File Management
 
 | Command | Description |
 |---------|-------------|
-| `:MPListFiles` | List files on device |
-| `:MPEraseOne` | Delete single file or folder from device |
-| `:MPEraseAll` | Delete all files from device |
+| `:MP list_files` | List files on device |
+| `:MP erase` | Delete single file or folder from device |
+| `:MP erase_all` | Delete all files from device |
 
 ### Setup Commands
 
 | Command | Description |
 |---------|-------------|
-| `:MPInit` | Initialize MicroPython project (creates pyproject.toml, selects board) |
-| `:MPInstall` | Install project dependencies with uv |
-| `:MPSetPort` | Set the device port |
-| `:MPSetBaud` | Set the baud rate (optional, mpremote auto-detects) |
-| `:MPSetStubs` | Set MicroPython stubs for your board |
-| `:MPListDevices` | List connected MicroPython devices |
+| `:MP init` | Initialize MicroPython project (creates pyproject.toml, selects board) |
+| `:MP install` | Install project dependencies with uv |
+| `:MP set_port` | Set the device port |
+| `:MP set_baud` | Set the baud rate (optional, mpremote auto-detects) |
+| `:MP set_stubs` | Set MicroPython stubs for your board |
+| `:MP list_devices` | List connected MicroPython devices |
+| `:MP health` | Run `:checkhealth micropython_nvim` |
+
+### Legacy Commands
+
+The previous `:MPxxx` commands still work as aliases:
+
+| Legacy | Use instead |
+|--------|-------------|
+| `:MPRun` / `:MPRunMain` | `:MP run` / `:MP run_main` |
+| `:MPUpload` / `:MPUploadAll` | `:MP upload` / `:MP upload_all` |
+| `:MPRepl` / `:MPSync` | `:MP repl` / `:MP sync` |
+| `:MPReset` / `:MPHardReset` | `:MP reset` / `:MP hard_reset` |
+| `:MPListFiles` / `:MPListDevices` | `:MP list_files` / `:MP list_devices` |
+| `:MPEraseOne` / `:MPEraseAll` | `:MP erase` / `:MP erase_all` |
+| `:MPInit` / `:MPInstall` | `:MP init` / `:MP install` |
+| `:MPSetPort` / `:MPSetBaud` / `:MPSetStubs` | `:MP set_port` / `:MP set_baud` / `:MP set_stubs` |
+
+### Health Check
+
+`:checkhealth micropython_nvim` reports on mpremote, uv, mpflash, snacks.nvim, the project config and whether a device is connected, with install hints for anything missing.
 
 ### Terminal Keymaps
 
-Commands that open a terminal (`:MPRun`, `:MPRepl`, etc.) use snacks.nvim terminal:
+Commands that open a terminal (`:MP run`, `:MP repl`, etc.) use the snacks.nvim terminal when it is installed, and a floating built-in Neovim terminal otherwise:
 
 | Key | Mode | Action |
 |-----|------|--------|
@@ -164,7 +189,7 @@ Commands that open a terminal (`:MPRun`, `:MPRepl`, etc.) use snacks.nvim termin
 
 ### Upload Ignore List
 
-`:MPUploadAll` accepts file or folder names to ignore: `:MPUploadAll test.py unused`
+`:MP upload_all` accepts file or folder names to ignore: `:MP upload_all test.py unused`
 
 Default ignore list:
 
@@ -183,7 +208,7 @@ Steps to initialize a project:
 
 1. Create a new directory for your project
 2. Open Neovim in the project directory
-3. Run `:MPInit` - this will:
+3. Run `:MP init` - this will:
    - Prompt you to select your target board (RP2, ESP32, etc.)
    - Create `pyproject.toml` with dependencies and stubs
    - Create `main.py` - starter blink program
@@ -192,8 +217,8 @@ Steps to initialize a project:
    - Create `.gitignore`
    - Optionally run `uv sync` to install dependencies
 
-4. If you skipped the install prompt, run `:MPInstall` to install dependencies
-5. Run `:MPSetPort` to set the port (or use `auto` for auto-detection)
+4. If you skipped the install prompt, run `:MP install` to install dependencies
+5. Run `:MP set_port` to set the port (or use `auto` for auto-detection)
 
 ### Supported Boards
 
@@ -224,13 +249,13 @@ Port options:
 For projects with multiple files and directories, see the [examples/led_button](./examples/led_button) directory.
 
 Key features for multi-file projects:
-- `:MPUploadAll` recursively uploads directories
-- `:MPSync` mounts local directory for live development
-- `:MPRunMain` runs main.py after upload
+- `:MP upload_all` recursively uploads directories
+- `:MP sync` mounts local directory for live development
+- `:MP run_main` runs main.py after upload
 
-### Live Development with MPSync
+### Live Development with `:MP sync`
 
-The `:MPSync` command mounts your local project directory on the device as `/remote`. This allows you to:
+The `:MP sync` command mounts your local project directory on the device as `/remote`. This allows you to:
 
 1. Edit files locally
 2. Changes are immediately available on device (no upload needed)
@@ -238,8 +263,8 @@ The `:MPSync` command mounts your local project directory on the device as `/rem
 4. Rapidly iterate without waiting for uploads
 
 ```
-:MPSync        " Mount current directory
-:MPRepl        " Open REPL
+:MP sync        " Mount current directory
+:MP repl        " Open REPL
 >>> import main  " Run your code
 ```
 
@@ -271,14 +296,14 @@ require("lualine").setup({
 This plugin now uses mpremote instead of ampy. If you have existing projects with `.ampy` configuration files:
 
 1. The plugin will still read `.ampy` files but will show a deprecation warning
-2. Run `:MPInit` to create a new `.micropython` configuration
+2. Run `:MP init` to create a new `.micropython` configuration
 3. Your `.ampy` file can be safely deleted after migration
 
 Key differences:
 - No need for rshell - mpremote has built-in REPL
 - Auto-detection of devices with `PORT=auto`
-- Recursive directory upload with `:MPUploadAll`
-- Live development with `:MPSync` (filesystem mounting)
+- Recursive directory upload with `:MP upload_all`
+- Live development with `:MP sync` (filesystem mounting)
 
 ## Examples
 

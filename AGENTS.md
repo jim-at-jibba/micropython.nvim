@@ -14,17 +14,22 @@
 ```
 lua/
   micropython_nvim/    # Internal modules
+    commands.lua       # :MP subcommand registry, dispatch and completion
     config.lua         # Configuration defaults and state
+    health.lua         # :checkhealth micropython_nvim
+    mpremote.lua       # Shared mpremote runner (argv, async jobs, terminal commands)
     run.lua            # Run/upload code to device
     setup.lua          # Configure port, baud, stubs
     repl.lua           # REPL access
+    terminal.lua       # Terminal: snacks.nvim if installed, else built-in float
+    ui.lua             # Picker: snacks.nvim if installed, else vim.ui.select
     project.lua        # Project initialization
     utils.lua          # File I/O, config, helpers
   micropython_nvim.lua # Main entry point, public API
 plugin/
-  micropython_nvim.lua # Vim commands, lazy-loads plugin
+  micropython_nvim.lua # :MP command and legacy :MPxxx aliases
 test/
-  plugin_spec.lua      # vusted test suite
+  *_spec.lua           # vusted test suites, one per module
 doc/
   micropython.nvim.txt # Help documentation
 ```
@@ -181,27 +186,24 @@ function M.run()
 end
 ```
 
-### 3. Commands in Plugin File
+### 3. Subcommands in One Registry
 
 ```lua
--- plugin/micropython_nvim.lua
-vim.api.nvim_create_user_command("MPRun", function()
-  require("micropython_nvim").run()
-end, { desc = "Run current buffer on MicroPython device" })
+-- lua/micropython_nvim/commands.lua: every :MP subcommand lives in M.subcommands
+run = { desc = 'Run current buffer on the device', impl = _facade('run') },
 ```
 
 ### 4. Async Operations
 
 ```lua
-local function _async_job(command, command_name)
-  vim.fn.jobstart(command, {
-    on_exit = function(_, exit_status, _)
-      if exit_status == 0 then
-        vim.notify(command_name .. " completed", vim.log.levels.INFO, { title = "micropython.nvim" })
-      end
-    end,
-  })
-end
+-- Background: argv-based, no shell; notifies start/success/failure (with stderr) when named
+Mpremote.run({ 'cp', file_path, ':' .. filename }, { name = 'Upload ' .. filename })
+
+-- With a result callback
+Mpremote.run({ 'fs', 'ls', ':' }, {
+  on_exit = function(result) -- { code, stdout, stderr }
+  end,
+})
 ```
 
 ## Common Tasks
@@ -211,8 +213,8 @@ end
 1. Create `lua/micropython_nvim/feature.lua`
 2. Add type annotations with `---@`
 3. Export from `lua/micropython_nvim.lua` if public
-4. Add command in `plugin/micropython_nvim.lua`
-5. Add tests in `test/plugin_spec.lua`
+4. Add a subcommand to `M.subcommands` in `commands.lua`
+5. Add tests in `test/<feature>_spec.lua`
 
 ### Add configuration option
 
@@ -220,20 +222,26 @@ end
 2. Add `---@field` annotation to `MicroPython.Config`
 3. Document in README
 
-### Add user command
+### Add a :MP subcommand
 
 ```lua
--- plugin/micropython_nvim.lua
-vim.api.nvim_create_user_command("MPNewCommand", function(opts)
-  require("micropython_nvim").feature(opts.args)
-end, { nargs = "?", desc = "Description" })
+-- lua/micropython_nvim/commands.lua, in M.subcommands
+feature = {
+  desc = 'Description',
+  impl = function(args)
+    require('micropython_nvim').feature(args)
+  end,
+  complete = function(arglead) return {} end, -- optional argument completion
+},
 ```
+
+Do not add new `:MPxxx` commands; `LEGACY_ALIASES` is only for pre-v3 names.
 
 ## Conventions
 - Config state: Use `config.lua` module instead of `_G` table
-- Command assembly: Use `string.format()` for ampy/rshell commands
-- Terminal usage: Use `Snacks.terminal(command)` for floating terminals
-- Async operations: Use `vim.fn.jobstart()` with `on_exit` callback
+- Command assembly: Build mpremote argv with `Mpremote.argv()`; use `Mpremote.command()` for shell-escaped terminal strings
+- Terminal usage: Use `Terminal.open(command)` (never call `Snacks.terminal` directly)
+- Async operations: Use `Mpremote.run(args, { name, on_exit })`
 - File operations: Use `vim.fn` functions for file I/O in user-facing code, `io.*` for internals
 - Project root: All operations assume Neovim opened at project root
 - Config sync: Update both config module state and `.ampy` file

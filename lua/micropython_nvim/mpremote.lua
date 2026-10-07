@@ -11,6 +11,11 @@ local M = {}
 ---@field stdout string
 ---@field stderr string
 
+---@class MicroPython.Device
+---@field port string
+---@field serial string
+---@field manufacturer string
+
 ---@class MicroPython.MpremoteRunOpts: MicroPython.MpremoteOpts
 ---@field name? string Label for notifications; when set, start, success and failure are reported
 ---@field on_exit? fun(result: MicroPython.MpremoteResult)
@@ -120,6 +125,48 @@ function M.run(args, opts)
     _notify(opts.name .. ' started', vim.log.levels.INFO)
   end
   return job_id
+end
+
+---Run mpremote and wait for it to finish. Only for contexts that must block, like :checkhealth.
+---@param args string[]
+---@param opts? MicroPython.MpremoteOpts
+---@param timeout_ms? integer Default 5000
+---@return MicroPython.MpremoteResult
+function M.run_sync(args, opts, timeout_ms)
+  timeout_ms = timeout_ms or 5000
+  local result
+  local job_id = M.run(args, {
+    connect = (opts or {}).connect,
+    on_exit = function(r)
+      result = r
+    end,
+  })
+
+  vim.wait(timeout_ms, function()
+    return result ~= nil
+  end, 50)
+
+  if not result then
+    if job_id then
+      pcall(vim.fn.jobstop, job_id)
+    end
+    return { code = -1, stdout = '', stderr = string.format('timed out after %dms', timeout_ms) }
+  end
+  return result
+end
+
+---Parse `mpremote connect list` output
+---@param output string
+---@return MicroPython.Device[]
+function M.parse_device_list(output)
+  local devices = {}
+  for line in vim.gsplit(output, '\n') do
+    local port, serial, manufacturer = line:match('^(%S+)%s+(%S+)%s+(.+)$')
+    if port then
+      table.insert(devices, { port = port, serial = serial, manufacturer = manufacturer })
+    end
+  end
+  return devices
 end
 
 return M

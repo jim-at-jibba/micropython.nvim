@@ -1,4 +1,5 @@
-*micropython.nvim.txt*       For NVIM v0.9.0      Last change: 2025 January 01
+*micropython.nvim.txt*
+                           For Neovim >= 0.9.0    Last change: 2026 October 07
 
 ==============================================================================
 Table of Contents                         *micropython.nvim-table-of-contents*
@@ -8,11 +9,11 @@ Table of Contents                         *micropython.nvim-table-of-contents*
   - Goals                            |micropython.nvim-micropython_nvim-goals|
   - Features                      |micropython.nvim-micropython_nvim-features|
   - Requirements              |micropython.nvim-micropython_nvim-requirements|
-  - Quickstart                  |micropython.nvim-micropython_nvim-quickstart|
   - Installation              |micropython.nvim-micropython_nvim-installation|
+  - Quickstart                  |micropython.nvim-micropython_nvim-quickstart|
   - Usage                            |micropython.nvim-micropython_nvim-usage|
   - Project Setup            |micropython.nvim-micropython_nvim-project-setup|
-  - Migration                    |micropython.nvim-micropython_nvim-migration|
+  - Statusline                  |micropython.nvim-micropython_nvim-statusline|
 
 ==============================================================================
 1. micropython_nvim                        *micropython.nvim-micropython_nvim*
@@ -21,18 +22,19 @@ Table of Contents                         *micropython.nvim-table-of-contents*
 INTRODUCTION                  *micropython.nvim-micropython_nvim-introduction*
 
 micropython_nvim is a plugin that aims to make it easier and more enjoyable to
-work on MicroPython projects in Neovim. It uses mpremote, the official
+work on MicroPython projects in Neovim. It uses mpremote
+<https://docs.micropython.org/en/latest/reference/mpremote.html>, the official
 MicroPython remote control tool.
 
-See the |micropython.nvim-quickstart| section to get started.
+See the |micropython.nvim-micropython_nvim-quickstart| section to get started.
 
-If you open an existing project that has a `.micropython` configuration file
-in the root directory, the plugin will automatically configure the port and
-baud rate for you.
+N.B. If you open an existing project that has a `.micropython` configuration
+file in the root directory, the plugin will automatically configure the port
+and baud rate for you.
 
 **IMPORTANT** This plugin assumes you are opening Neovim at the root of the
-project. Some commands will not behave in the expected way if you choose not
-to do this.
+project. Some commands will not behave in the expected way if you choose not to
+do this.
 
 
 GOALS                                *micropython.nvim-micropython_nvim-goals*
@@ -49,7 +51,7 @@ GOALS                                *micropython.nvim-micropython_nvim-goals*
 FEATURES                          *micropython.nvim-micropython_nvim-features*
 
 - **Run** local python files on your micro-controller
-- **Upload** local python files (including recursive directory upload)
+- **Upload** local python files to your micro-controller (including recursive directory upload)
 - **Sync** mount local directory for live development without uploading
 - **REPL** access via mpremote
 - **File management** - list, delete files on device
@@ -60,46 +62,42 @@ FEATURES                          *micropython.nvim-micropython_nvim-features*
 REQUIREMENTS                  *micropython.nvim-micropython_nvim-requirements*
 
 - Neovim >= 0.9 <https://github.com/neovim/neovim/releases/tag/v0.9.0>
-- toggleterm.nvim <https://github.com/akinsho/toggleterm.nvim>
-- snacks.nvim <https://github.com/folke/snacks.nvim> (optional, for enhanced picker UI)
 - mpremote <https://docs.micropython.org/en/latest/reference/mpremote.html>
 - uv <https://docs.astral.sh/uv/> (for dependency management, Unix-only)
+- Optional: snacks.nvim <https://github.com/folke/snacks.nvim> for nicer terminals and pickers. Without it the plugin uses Neovim’s built-in terminal and `vim.ui.select`.
+- Optional: mpflash <https://github.com/Josverl/mpflash> for flashing firmware
 
-Install uv (Unix/macOS): >bash
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-<
-
-Install mpremote (will be installed automatically by `uv sync`): >bash
-    uv tool install mpremote
-<
-
-
-QUICKSTART                      *micropython.nvim-micropython_nvim-quickstart*
-
-- Install micropython_nvim using your preferred package manager
-- Add a keybind to `run` function
-
->lua
-    vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
-<
-
-- Follow the |micropython.nvim-project-setup| steps to create the necessary
-  files for a new project.
-
-**Next steps**
-
-- Add a |micropython.nvim-statusline-component|
-- See the examples/ directory for multi-file project examples
+Run `:checkhealth micropython_nvim` (or `:MP health`) to check your setup.
 
 
 INSTALLATION                  *micropython.nvim-micropython_nvim-installation*
+
+
+PREREQUISITES ~
+
+Install uv (Unix/macOS):
+
+>bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+<
+
+Install mpremote (will be installed automatically by `uv sync`, or manually):
+
+>bash
+    uv tool install mpremote
+    # or
+    pip install mpremote
+<
+
+
+PLUGIN INSTALLATION ~
 
 lazy.nvim ~
 
 >lua
     {
         "jim-at-jibba/micropython.nvim",
-        dependencies = { "akinsho/toggleterm.nvim", "folke/snacks.nvim" },
+        dependencies = { "folke/snacks.nvim" }, -- optional
     }
 <
 
@@ -108,48 +106,134 @@ packer ~
 >lua
     use {
         "jim-at-jibba/micropython.nvim",
-        requires = { "akinsho/toggleterm.nvim", "folke/snacks.nvim" },
+        requires = { "folke/snacks.nvim" }, -- optional
     }
 <
 
 
+QUICKSTART                      *micropython.nvim-micropython_nvim-quickstart*
+
+1. Install |micropython.nvim-micropython_nvim-installation| micropython_nvim using your preferred package manager
+2. Add a keybind to `run` function:
+
+>lua
+    vim.keymap.set("n", "<leader>mr", require("micropython_nvim").run)
+<
+
+1. Follow the |micropython.nvim-micropython_nvim-project-setup| steps to create the necessary files for a new project.
+
+**Next steps**
+
+- Add a statusline component |micropython.nvim-micropython_nvim-statusline|
+- See the examples <./examples/> directory for multi-file project examples
+
+
 USAGE                                *micropython.nvim-micropython_nvim-usage*
 
-Core Commands ~
+All commands live under a single `:MP` command with tab completion: type `:MP
+<Tab>` to see them. Running `:MP` on its own opens a picker.
 
-- `:MPRun` - Run current buffer on the micro-controller
-- `:MPRunMain` - Run main.py on the device
-- `:MPUpload` - Upload current buffer to the micro-controller
-- `:MPUploadAll` - Upload all project files (recursive)
-- `:MPRepl` - Open MicroPython REPL
 
-Development Commands ~
+CORE COMMANDS ~
 
-- `:MPSync` - Mount local directory on device for live development
-- `:MPReset` - Soft reset the device
-- `:MPHardReset` - Hard reset the device
+  Command          Description
+  ---------------- -----------------------------------------------
+  :MP run          Run current buffer on the micro-controller
+  :MP run_main     Run main.py on the device
+  :MP upload       Upload current buffer to the micro-controller
+  :MP upload_all   Upload all project files (recursive)
+  :MP repl         Open MicroPython REPL
 
-File Management ~
+DEVELOPMENT COMMANDS ~
 
-- `:MPListFiles` - List files on device
-- `:MPEraseOne` - Delete single file or folder from device
-- `:MPEraseAll` - Delete all files from device
+  Command          Description
+  ---------------- ------------------------------------------------------
+  :MP sync         Mount local directory on device for live development
+  :MP reset        Soft reset the device
+  :MP hard_reset   Hard reset the device
 
-Setup Commands ~
+FILE MANAGEMENT ~
 
-- `:MPInit` - Initialize MicroPython project (creates pyproject.toml, selects board)
-- `:MPInstall` - Install project dependencies with uv
-- `:MPSetPort` - Set the device port
-- `:MPSetBaud` - Set the baud rate (optional, mpremote auto-detects)
-- `:MPSetStubs` - Set MicroPython stubs for your board
-- `:MPListDevices` - List connected MicroPython devices
+  Command          Description
+  ---------------- ------------------------------------------
+  :MP list_files   List files on device
+  :MP erase        Delete single file or folder from device
+  :MP erase_all    Delete all files from device
 
-Upload Ignore List ~
+SETUP COMMANDS ~
 
-`:MPUploadAll` accepts file or folder names to ignore:
-`:MPUploadAll test.py unused`
+  -----------------------------------------------------------------------
+  Command                       Description
+  ----------------------------- -----------------------------------------
+  :MP init                      Initialize MicroPython project (creates
+                                pyproject.toml, selects board)
 
-Default ignore list: >lua
+  :MP install                   Install project dependencies with uv
+
+  :MP set_port                  Set the device port
+
+  :MP set_baud                  Set the baud rate (optional, mpremote
+                                auto-detects)
+
+  :MP set_stubs                 Set MicroPython stubs for your board
+
+  :MP list_devices              List connected MicroPython devices
+
+  :MP health                    Run :checkhealth micropython_nvim
+  -----------------------------------------------------------------------
+
+LEGACY COMMANDS ~
+
+The previous `:MPxxx` commands still work as aliases:
+
+  -----------------------------------------------------------------------
+  Legacy                      Use instead
+  --------------------------- -------------------------------------------
+  :MPRun / :MPRunMain         :MP run / :MP run_main
+
+  :MPUpload / :MPUploadAll    :MP upload / :MP upload_all
+
+  :MPRepl / :MPSync           :MP repl / :MP sync
+
+  :MPReset / :MPHardReset     :MP reset / :MP hard_reset
+
+  :MPListFiles /              :MP list_files / :MP list_devices
+  :MPListDevices
+
+  :MPEraseOne / :MPEraseAll   :MP erase / :MP erase_all
+
+  :MPInit / :MPInstall        :MP init / :MP install
+
+  :MPSetPort / :MPSetBaud /   :MP set_port / :MP set_baud / :MP set_stubs
+  :MPSetStubs
+  -----------------------------------------------------------------------
+
+HEALTH CHECK ~
+
+`:checkhealth micropython_nvim` reports on mpremote, uv, mpflash, snacks.nvim,
+the project config and whether a device is connected, with install hints for
+anything missing.
+
+
+TERMINAL KEYMAPS ~
+
+Commands that open a terminal (`:MP run`, `:MP repl`, etc.) use the snacks.nvim
+terminal when it is installed, and a floating built-in Neovim terminal
+otherwise:
+
+  Key          Mode       Action
+  ------------ ---------- ---------------------
+  <Esc><Esc>   Terminal   Exit to normal mode
+  q            Normal     Close terminal
+
+UPLOAD IGNORE LIST ~
+
+`:MP upload_all` accepts file or folder names to ignore: `:MP upload_all
+test.py unused`
+
+Default ignore list:
+
+>lua
     {
       '.git', 'pyproject.toml', 'uv.lock', '.ampy', '.micropython', '.vscode',
       '.gitignore', 'project.pymakr', 'env', 'venv', '.venv', '__pycache__',
@@ -165,40 +249,55 @@ Steps to initialize a project:
 
 1. Create a new directory for your project
 2. Open Neovim in the project directory
-3. Run `:MPInit` - this will:
-   - Prompt you to select your target board (RP2, ESP32, etc.)
-   - Create `pyproject.toml` with dependencies and stubs
-   - Create `main.py` - starter blink program
-   - Create `.micropython` - device configuration
-   - Create `pyrightconfig.json` - LSP configuration
-   - Create `.gitignore`
-   - Optionally run `uv sync` to install dependencies
-4. If you skipped the install prompt, run `:MPInstall` to install dependencies
-5. `:MPSetPort` to set the port (or use `auto` for auto-detection)
+3. Run `:MP init` - this will:- Prompt you to select your target board (RP2, ESP32, etc.)
+- Create `pyproject.toml` with dependencies and stubs
+- Create `main.py` - starter blink program
+- Create `.micropython` - device configuration
+- Create `pyrightconfig.json` - LSP configuration
+- Create `.gitignore`
+- Optionally run `uv sync` to install dependencies
 
-Supported Boards ~
 
-- Raspberry Pi Pico (RP2) - `micropython-rp2-stubs`
-- ESP32 - `micropython-esp32-stubs`
-- ESP8266 - `micropython-esp8266-stubs`
-- STM32 / Pyboard - `micropython-stm32-stubs`
-- SAMD (Wio Terminal) - `micropython-samd-stubs`
+4. If you skipped the install prompt, run `:MP install` to install dependencies
+5. Run `:MP set_port` to set the port (or use `auto` for auto-detection)
 
-Configuration File ~
 
-The `.micropython` file stores project configuration: >
+SUPPORTED BOARDS ~
+
+  Board                     Stub Package
+  ------------------------- ---------------------------
+  Raspberry Pi Pico (RP2)   micropython-rp2-stubs
+  ESP32                     micropython-esp32-stubs
+  ESP8266                   micropython-esp8266-stubs
+  STM32 / Pyboard           micropython-stm32-stubs
+  SAMD (Wio Terminal)       micropython-samd-stubs
+
+CONFIGURATION FILE ~
+
+The `.micropython` file stores project configuration:
+
+>
     PORT=auto
     BAUD=115200
 <
 
-Port options:
-- `auto` - Auto-detect first USB serial port
-- `/dev/ttyUSB0` - Specific port path
-- `id:<serial>` - Connect by USB serial number
+Port options: - `auto` - Auto-detect first USB serial port - `/dev/ttyUSB0` -
+Specific port path - `id:<serial>` - Connect by USB serial number
 
-Live Development with MPSync ~
 
-The `:MPSync` command mounts your local project directory on the device as
+MULTI-FILE PROJECTS ~
+
+For projects with multiple files and directories, see the examples/led_button
+<./examples/led_button> directory.
+
+Key features for multi-file projects: - `:MP upload_all` recursively uploads
+directories - `:MP sync` mounts local directory for live development - `:MP
+run_main` runs main.py after upload
+
+
+LIVE DEVELOPMENT WITH :MP SYNC ~
+
+The `:MP sync` command mounts your local project directory on the device as
 `/remote`. This allows you to:
 
 1. Edit files locally
@@ -207,14 +306,18 @@ The `:MPSync` command mounts your local project directory on the device as
 4. Rapidly iterate without waiting for uploads
 
 >
-    :MPSync        " Mount current directory
-    :MPRepl        " Open REPL
+    :MP sync        " Mount current directory
+    :MP repl        " Open REPL
     >>> import main  " Run your code
 <
 
-Statusline ~
+
+STATUSLINE                      *micropython.nvim-micropython_nvim-statusline*
 
 A statusline component shows the current port configuration.
+
+
+LUALINE COMPONENT ~
 
 >lua
     require("lualine").setup({
@@ -222,29 +325,12 @@ A statusline component shows the current port configuration.
             lualine_b = {
                 {
                   require("micropython_nvim").statusline,
-                  cond = package.loaded["micropython_nvim"]
-                         and require("micropython_nvim").exists,
+                  cond = package.loaded["micropython_nvim"] and require("micropython_nvim").exists,
                 },
             }
         }
     })
 <
-
-
-MIGRATION                        *micropython.nvim-micropython_nvim-migration*
-
-This plugin now uses mpremote instead of ampy. If you have existing projects
-with `.ampy` configuration files:
-
-1. The plugin will still read `.ampy` files but will show a deprecation warning
-2. Run `:MPInit` to create a new `.micropython` configuration
-3. Your `.ampy` file can be safely deleted after migration
-
-Key differences:
-- No need for rshell - mpremote has built-in REPL
-- Auto-detection of devices with `PORT=auto`
-- Recursive directory upload with `:MPUploadAll`
-- Live development with `:MPSync` (filesystem mounting)
 
 Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
 

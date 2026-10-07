@@ -15,8 +15,8 @@ jobs:
       - name: panvimdoc
         uses: kdheepak/panvimdoc@main
         with:
-          vimdoc: stride
-          version: "Neovim >= 0.8.0"
+          vimdoc: micropython.nvim
+          version: "Neovim >= 0.9.0"
           demojify: true
           treesitter: true
       - name: Push changes

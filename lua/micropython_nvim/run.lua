@@ -1,6 +1,7 @@
 local Config = require('micropython_nvim.config')
 local Utils = require('micropython_nvim.utils')
 local Mpremote = require('micropython_nvim.mpremote')
+local Terminal = require('micropython_nvim.terminal')
 local UI = require('micropython_nvim.ui')
 
 local M = {}
@@ -128,7 +129,7 @@ function M.run()
 
   local file_path = vim.api.nvim_buf_get_name(0)
   local command = Mpremote.command({ 'run', file_path }) .. '; ' .. Utils.PRESS_ENTER_PROMPT
-  Snacks.terminal(command)
+  Terminal.open(command)
 end
 
 function M.upload_current()
@@ -189,7 +190,7 @@ function M.sync()
 
   local directory = Utils.get_cwd()
   local command = Mpremote.command({ 'mount', directory })
-  Snacks.terminal(command)
+  Terminal.open(command)
 end
 
 function M.soft_reset()
@@ -216,7 +217,7 @@ function M.erase_all()
   local command = Mpremote.command({ 'fs', 'rm', '-r', ':' })
     .. ' 2>&1; '
     .. Utils.PRESS_ENTER_PROMPT
-  Snacks.terminal(command)
+  Terminal.open(command)
 end
 
 function M.erase_one()
@@ -250,7 +251,7 @@ function M.list_files()
   end
 
   local command = Mpremote.command({ 'tree', ':' }) .. '; ' .. Utils.PRESS_ENTER_PROMPT
-  Snacks.terminal(command)
+  Terminal.open(command)
 end
 
 function M.run_main()
@@ -261,7 +262,7 @@ function M.run_main()
   local command = Mpremote.command({ 'exec', "exec(open('main.py').read())" })
     .. '; '
     .. Utils.PRESS_ENTER_PROMPT
-  Snacks.terminal(command)
+  Terminal.open(command)
 end
 
 return M

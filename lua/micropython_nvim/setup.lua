@@ -31,33 +31,16 @@ M.STUB_OPTIONS = {
   'micropython-webassembly-stubs',
 }
 
----@class MicroPython.Device
----@field port string
----@field serial string
----@field manufacturer string
-
 ---@param on_devices fun(devices: MicroPython.Device[], err?: string)
 function M.list_devices(on_devices)
   Mpremote.run({ 'connect', 'list' }, {
     connect = false,
     on_exit = function(result)
-      local devices = {}
-      local err
-      if result.code == 0 then
-        for line in vim.gsplit(result.stdout, '\n') do
-          local port, serial, manufacturer = line:match('^(%S+)%s+(%S+)%s+(.+)$')
-          if port then
-            table.insert(devices, {
-              port = port,
-              serial = serial,
-              manufacturer = manufacturer,
-            })
-          end
-        end
-      else
-        err = Mpremote.error_output(result)
+      if result.code ~= 0 then
+        on_devices({}, Mpremote.error_output(result))
+        return
       end
-      on_devices(devices, err)
+      on_devices(Mpremote.parse_device_list(result.stdout))
     end,
   })
 end
