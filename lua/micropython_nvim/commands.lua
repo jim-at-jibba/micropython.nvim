@@ -30,6 +30,7 @@ M.subcommands = {
   reset = { desc = 'Soft reset the device', impl = _facade('soft_reset') },
   hard_reset = { desc = 'Hard reset the device', impl = _facade('hard_reset') },
   list_files = { desc = 'List files on the device', impl = _facade('list_files') },
+  files = { desc = 'Browse and edit files on the device', impl = _facade('files') },
   erase = { desc = 'Delete a file or folder from the device', impl = _facade('erase_one') },
   erase_all = { desc = 'Delete all files from the device', impl = _facade('erase_all') },
   init = { desc = 'Initialise a MicroPython project', impl = _facade('init') },

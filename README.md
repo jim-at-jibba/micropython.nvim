@@ -43,7 +43,7 @@ N.B. If you open an existing project that has a `.micropython` configuration fil
 - **Upload** local python files to your micro-controller (including recursive directory upload)
 - **Sync** mount local directory for live development without uploading
 - **REPL** access via mpremote
-- **File management** - list, delete files on device
+- **File browser** - browse, edit, delete, download and create files and folders on the device
 - **Device management** - list connected devices, reset
 - **Project initialization**
 
@@ -177,6 +177,7 @@ All commands live under a single `:MP` command with tab completion: type `:MP <T
 
 | Command | Description |
 |---------|-------------|
+| `:MP files` | Browse, edit, delete and download files on the device |
 | `:MP list_files` | List files on device |
 | `:MP erase` | Delete single file or folder from device |
 | `:MP erase_all` | Delete all files from device |
@@ -229,6 +230,25 @@ already matches the device are skipped, so uploading again only sends what chang
 
 `:MP upload` uploads the current buffer the same way: `lib/led.py` goes to `:lib/led.py`. A file
 outside the project goes to the root of the device.
+
+### File Browser
+
+`:MP files` opens a browser showing the device filesystem as a tree, with file sizes and the free
+space on the device. It loads in the background, so Neovim stays responsive while the device answers.
+
+| Key | Action |
+|-----|--------|
+| `<CR>` | Open the file under the cursor in an `mp://<path>` buffer |
+| `d` | Delete the file or folder under the cursor (asks first) |
+| `D` | Download the file under the cursor into the project, at the same path |
+| `a` | Create a folder in the folder under the cursor |
+| `u` | Upload the file you opened the browser from into the folder under the cursor |
+| `R` | Refresh |
+| `q` | Close |
+
+An `mp://<path>` buffer holds a file from the device: edit it and `:w` writes it back. You can also
+open one directly, for example `:e mp://lib/led.py`. Actions that work on a folder use the folder
+under the cursor, the folder of the file under the cursor, or the device root on the header lines.
 
 ### Upload Ignore List
 

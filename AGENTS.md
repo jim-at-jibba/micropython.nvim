@@ -20,6 +20,7 @@ lua/
     mpremote.lua       # Shared mpremote runner (argv, async jobs, terminal commands)
     run.lua            # Run code, reset, erase and list files on the device
     upload.lua         # Upload files (keeping project paths) and upload on save
+    files.lua          # Device file browser and mp://<path> buffers
     setup.lua          # Configure port, baud, stubs
     repl.lua           # REPL access
     terminal.lua       # Terminal: snacks.nvim if installed, else built-in float
