@@ -22,7 +22,7 @@ lua/
     upload.lua         # Upload files (keeping project paths) and upload on save
     files.lua          # Device file browser and mp://<path> buffers
     setup.lua          # Configure port, baud, stubs
-    repl.lua           # REPL access
+    repl.lua           # Persistent REPL split: send line/selection/buffer, interrupt
     terminal.lua       # Terminal: snacks.nvim if installed, else built-in float
     ui.lua             # Picker: snacks.nvim if installed, else vim.ui.select
     project.lua        # Project initialization
@@ -242,7 +242,7 @@ Do not add new `:MPxxx` commands; `LEGACY_ALIASES` is only for pre-v3 names.
 ## Conventions
 - Config state: Use `config.lua` module instead of `_G` table
 - Command assembly: Build mpremote argv with `Mpremote.argv()`; use `Mpremote.command()` for shell-escaped terminal strings
-- Terminal usage: Use `Terminal.open(command)` (never call `Snacks.terminal` directly)
+- Terminal usage: Use `Terminal.open(command)` (never call `Snacks.terminal` directly); `Terminal.start` for a terminal in a window you manage, like the REPL split
 - Async operations: Use `Mpremote.run(args, { name, on_exit })`
 - File operations: Use `vim.fn` functions for file I/O in user-facing code, `io.*` for internals
 - Project root: All operations assume Neovim opened at project root

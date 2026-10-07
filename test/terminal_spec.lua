@@ -52,12 +52,6 @@ describe('micropython_nvim.terminal', function()
       assert.is_true(in_floating_terminal())
     end)
 
-    it('should open :MP repl in a terminal', function()
-      require('micropython_nvim.config').setup({})
-      require('micropython_nvim.commands').dispatch({ 'repl' })
-      assert.is_true(in_floating_terminal())
-    end)
-
     it('should open :MP run in a terminal', function()
       require('micropython_nvim.config').setup({})
       vim.cmd('edit ' .. vim.fn.tempname() .. '.py')

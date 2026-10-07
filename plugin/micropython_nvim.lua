@@ -1,7 +1,9 @@
 vim.api.nvim_create_user_command('MP', function(opts)
-  require('micropython_nvim.commands').dispatch(opts.fargs)
+  local range = opts.range > 0 and { line1 = opts.line1, line2 = opts.line2 } or nil
+  require('micropython_nvim.commands').dispatch(opts.fargs, range)
 end, {
   nargs = '*',
+  range = true,
   desc = 'MicroPython: run a subcommand (:MP <Tab> to list them)',
   complete = function(arglead, cmdline, cursorpos)
     return require('micropython_nvim.commands').complete(arglead, cmdline, cursorpos)

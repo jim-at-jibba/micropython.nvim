@@ -79,6 +79,14 @@ function M.command(args, opts)
   return table.concat(vim.tbl_map(vim.fn.shellescape, M.argv(args, opts)), ' ')
 end
 
+---The error for an mpremote argv that could not be started, with an install hint
+---@param argv string[]
+---@return string
+function M.not_found_message(argv)
+  local hint = argv[1] == 'uv' and 'uv sync' or 'pip install mpremote'
+  return string.format('mpremote not found (%s). Install with: %s', argv[1], hint)
+end
+
 ---Run mpremote in the background without a shell
 ---@param args string[]
 ---@param opts? MicroPython.MpremoteRunOpts
@@ -110,8 +118,7 @@ function M.run(args, opts)
   })
 
   if not ok or job_id <= 0 then
-    local hint = argv[1] == 'uv' and 'uv sync' or 'pip install mpremote'
-    local msg = string.format('mpremote not found (%s). Install with: %s', argv[1], hint)
+    local msg = M.not_found_message(argv)
     if opts.name then
       _notify(msg, vim.log.levels.ERROR)
     end

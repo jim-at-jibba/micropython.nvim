@@ -20,6 +20,22 @@ local function _open_float(buf)
   })
 end
 
+---Start a command as a terminal in the current buffer, which must be empty and unmodified
+---@param command string|string[] shell string, or argv run without a shell
+---@param job_opts table jobstart options (on_stdout, on_exit, ...)
+---@return integer? job nil when the command could not be started
+function M.start(command, job_opts)
+  local ok, job
+  if vim.fn.has('nvim-0.11') == 1 then
+    ok, job = pcall(vim.fn.jobstart, command, vim.tbl_extend('force', job_opts, { term = true }))
+  else
+    ok, job = pcall(vim.fn.termopen, command, job_opts)
+  end
+  if ok and job > 0 then
+    return job
+  end
+end
+
 ---Run a shell command in a floating terminal using Neovim's built-in terminal
 ---@param command string
 local function _builtin_terminal(command)
@@ -35,20 +51,14 @@ local function _builtin_terminal(command)
     end
   end
 
-  local job_opts = {
+  M.start(command, {
     -- Keep a failed command's output visible; q closes it
     on_exit = function(_, code)
       if code == 0 then
         vim.schedule(close)
       end
     end,
-  }
-  if vim.fn.has('nvim-0.11') == 1 then
-    job_opts.term = true
-    vim.fn.jobstart(command, job_opts)
-  else
-    vim.fn.termopen(command, job_opts)
-  end
+  })
 
   vim.keymap.set('n', 'q', close, { buffer = buf, desc = 'Close terminal' })
   vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { buffer = buf, desc = 'Exit terminal mode' })

@@ -15,6 +15,28 @@ function M.repl()
   require('micropython_nvim.repl').open()
 end
 
+function M.repl_send_line()
+  require('micropython_nvim.repl').send_line()
+end
+
+---@param line1 integer
+---@param line2 integer
+function M.repl_send_range(line1, line2)
+  require('micropython_nvim.repl').send_range(line1, line2)
+end
+
+function M.repl_send_selection()
+  require('micropython_nvim.repl').send_selection()
+end
+
+function M.repl_send_buffer()
+  require('micropython_nvim.repl').send_buffer()
+end
+
+function M.repl_interrupt()
+  require('micropython_nvim.repl').interrupt()
+end
+
 function M.upload_current()
   require('micropython_nvim.upload').upload_current()
 end
