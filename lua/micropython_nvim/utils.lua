@@ -21,6 +21,20 @@ function M.get_cwd()
   return vim.fn.getcwd()
 end
 
+---Warn and return false when no device port is configured
+---@return boolean
+function M.check_port_configured()
+  if Config.is_port_configured() then
+    return true
+  end
+  vim.notify(
+    'No port configured. Run :MP set_port first.',
+    vim.log.levels.WARN,
+    { title = 'micropython.nvim' }
+  )
+  return false
+end
+
 ---@return boolean
 function M.pyproject_exists()
   return vim.fn.filereadable(M.get_cwd() .. '/pyproject.toml') == 1

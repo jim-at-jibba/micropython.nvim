@@ -18,7 +18,8 @@ lua/
     config.lua         # Configuration defaults and state
     health.lua         # :checkhealth micropython_nvim
     mpremote.lua       # Shared mpremote runner (argv, async jobs, terminal commands)
-    run.lua            # Run/upload code to device
+    run.lua            # Run code, reset, erase and list files on the device
+    upload.lua         # Upload files (keeping project paths) and upload on save
     setup.lua          # Configure port, baud, stubs
     repl.lua           # REPL access
     terminal.lua       # Terminal: snacks.nvim if installed, else built-in float

@@ -4,6 +4,7 @@ local M = {}
 function M.setup(opts)
   require('micropython_nvim.config').setup(opts)
   require('micropython_nvim.utils').read_config()
+  require('micropython_nvim.upload').setup_upload_on_save()
 end
 
 function M.run()
@@ -15,12 +16,12 @@ function M.repl()
 end
 
 function M.upload_current()
-  require('micropython_nvim.run').upload_current()
+  require('micropython_nvim.upload').upload_current()
 end
 
 ---@param opts? MicroPython.UploadAllOptions
 function M.upload_all(opts)
-  require('micropython_nvim.run').upload_all(opts)
+  require('micropython_nvim.upload').upload_all(opts)
 end
 
 function M.set_baud_rate()

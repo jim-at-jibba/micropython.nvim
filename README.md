@@ -101,6 +101,39 @@ use {
 
 </details>
 
+### Options
+
+Options are optional; these are the defaults:
+
+```lua
+require("micropython_nvim").setup({
+    port = "auto",          -- "auto", a port like "/dev/ttyUSB0", or "id:<serial>"
+    baud = 115200,
+    debug = false,
+    upload_on_save = false, -- upload project files to the device when you save them
+    ui = {
+        picker_layout = "select", -- snacks.nvim picker layout
+    },
+})
+```
+
+With lazy.nvim, call it from `config`:
+
+```lua
+{
+    "jim-at-jibba/micropython.nvim",
+    config = function()
+        require("micropython_nvim").setup({ upload_on_save = true })
+    end,
+}
+```
+
+#### Upload on save
+
+With `upload_on_save = true`, every file you write inside a MicroPython project (a folder with a
+`.micropython` file) is uploaded to the same relative path on the device. Files and folders on the
+[ignore list](#upload-ignore-list) are not uploaded.
+
 ## Quickstart
 
 1. [Install](#installation) micropython_nvim using your preferred package manager
@@ -127,8 +160,8 @@ All commands live under a single `:MP` command with tab completion: type `:MP <T
 |---------|-------------|
 | `:MP run` | Run current buffer on the micro-controller |
 | `:MP run_main` | Run main.py on the device |
-| `:MP upload` | Upload current buffer to the micro-controller |
-| `:MP upload_all` | Upload all project files (recursive) |
+| `:MP upload` | Upload current buffer to the same project-relative path on the device |
+| `:MP upload_all` | Upload all project files, keeping folders (unchanged files are skipped) |
 | `:MP repl` | Open MicroPython REPL |
 
 ### Development Commands
@@ -187,11 +220,21 @@ Commands that open a terminal (`:MP run`, `:MP repl`, etc.) use the snacks.nvim 
 | `<Esc><Esc>` | Terminal | Exit to normal mode |
 | `q` | Normal | Close terminal |
 
+### Uploading
+
+`:MP upload_all` copies the project to the device and keeps its folder layout: `web/templates/info.html`
+is uploaded to `:web/templates/info.html`, and missing folders are created first. Files whose content
+already matches the device are skipped, so uploading again only sends what changed.
+
+`:MP upload` uploads the current buffer the same way: `lib/led.py` goes to `:lib/led.py`. A file
+outside the project goes to the root of the device.
+
 ### Upload Ignore List
 
-`:MP upload_all` accepts file or folder names to ignore: `:MP upload_all test.py unused`
+`:MP upload_all` accepts file or folder names, or project paths, to ignore:
+`:MP upload_all test.py docs web/static`
 
-Default ignore list:
+A name is ignored at any depth, so `__pycache__` skips every `__pycache__` folder. Default ignore list:
 
 ```lua
 {
@@ -249,7 +292,9 @@ Port options:
 For projects with multiple files and directories, see the [examples/led_button](./examples/led_button) directory.
 
 Key features for multi-file projects:
-- `:MP upload_all` recursively uploads directories
+
+- `:MP upload_all` uploads nested folders and skips unchanged files
+- `upload_on_save = true` uploads each file as you save it
 - `:MP sync` mounts local directory for live development
 - `:MP run_main` runs main.py after upload
 
