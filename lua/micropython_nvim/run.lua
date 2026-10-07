@@ -40,6 +40,13 @@ function M.run()
     return
   end
 
+  -- The REPL holds the serial port, so run through it when it is open
+  local Repl = require('micropython_nvim.repl')
+  if Repl.is_running() then
+    Repl.run_buffer()
+    return
+  end
+
   local file_path = vim.api.nvim_buf_get_name(0)
   local command = Mpremote.command({ 'run', file_path }) .. '; ' .. Utils.PRESS_ENTER_PROMPT
   Terminal.open(command)

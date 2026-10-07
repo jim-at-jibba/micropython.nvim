@@ -22,7 +22,7 @@ lua/
     upload.lua         # Upload files (keeping project paths) and upload on save
     files.lua          # Device file browser and mp://<path> buffers
     setup.lua          # Configure port, baud, stubs
-    repl.lua           # REPL access
+    repl.lua           # Persistent REPL split: send line/selection/buffer, interrupt
     terminal.lua       # Terminal: snacks.nvim if installed, else built-in float
     ui.lua             # Picker: snacks.nvim if installed, else vim.ui.select
     project.lua        # Project initialization

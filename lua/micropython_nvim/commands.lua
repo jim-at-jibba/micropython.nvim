@@ -2,8 +2,12 @@ local M = {}
 
 ---@class MicroPython.Subcommand
 ---@field desc string Shown in the :MP picker and used for the legacy alias description
----@field impl fun(args: string[]) Called with the arguments after the subcommand name
+---@field impl fun(args: string[], range?: MicroPython.Range) Called with the arguments after the subcommand name
 ---@field complete? fun(arglead: string): string[] Completes the subcommand's own arguments
+
+---@class MicroPython.Range
+---@field line1 integer
+---@field line2 integer
 
 ---@param name string
 ---@return fun(args: string[])
@@ -26,6 +30,18 @@ M.subcommands = {
     end,
   },
   repl = { desc = 'Open the MicroPython REPL', impl = _facade('repl') },
+  send = {
+    desc = 'Send the current line, or a range of lines, to the REPL',
+    impl = function(_, range)
+      if range then
+        require('micropython_nvim.repl').send_range(range.line1, range.line2)
+      else
+        require('micropython_nvim').repl_send_line()
+      end
+    end,
+  },
+  send_buffer = { desc = 'Send the whole buffer to the REPL', impl = _facade('repl_send_buffer') },
+  interrupt = { desc = 'Stop running code on the device', impl = _facade('repl_interrupt') },
   sync = { desc = 'Mount the project directory on the device', impl = _facade('sync') },
   reset = { desc = 'Soft reset the device', impl = _facade('soft_reset') },
   hard_reset = { desc = 'Hard reset the device', impl = _facade('hard_reset') },
@@ -78,7 +94,8 @@ end
 
 ---@param name string
 ---@param args string[]
-local function _run(name, args)
+---@param range? MicroPython.Range
+local function _run(name, args, range)
   local subcommand = M.subcommands[name]
   if not subcommand then
     vim.notify(
@@ -88,12 +105,13 @@ local function _run(name, args)
     )
     return
   end
-  subcommand.impl(args)
+  subcommand.impl(args, range)
 end
 
----Run `:MP <subcommand> [args...]`; with no subcommand, pick one
+---Run `:[range]MP <subcommand> [args...]`; with no subcommand, pick one
 ---@param fargs string[]
-function M.dispatch(fargs)
+---@param range? MicroPython.Range Lines given to :MP, if any
+function M.dispatch(fargs, range)
   if #fargs == 0 then
     require('micropython_nvim.ui').select(M.names(), { prompt = 'MicroPython:' }, function(choice)
       if not choice then
@@ -104,7 +122,7 @@ function M.dispatch(fargs)
     return
   end
 
-  _run(fargs[1], vim.list_slice(fargs, 2))
+  _run(fargs[1], vim.list_slice(fargs, 2), range)
 end
 
 ---Completion for :MP

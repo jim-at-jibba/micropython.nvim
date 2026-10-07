@@ -42,7 +42,7 @@ N.B. If you open an existing project that has a `.micropython` configuration fil
 - **Run** local python files on your micro-controller
 - **Upload** local python files to your micro-controller (including recursive directory upload)
 - **Sync** mount local directory for live development without uploading
-- **REPL** access via mpremote
+- **REPL** in a persistent split: send the current line, a selection or the whole buffer, and stop running code
 - **File browser** - browse, edit, delete, download and create files and folders on the device
 - **Device management** - list connected devices, reset
 - **Project initialization**
@@ -163,7 +163,10 @@ All commands live under a single `:MP` command with tab completion: type `:MP <T
 | `:MP run_main` | Run main.py on the device |
 | `:MP upload` | Upload current buffer to the same project-relative path on the device |
 | `:MP upload_all` | Upload all project files, keeping folders (unchanged files are skipped) |
-| `:MP repl` | Open MicroPython REPL |
+| `:MP repl` | Open or focus the REPL split |
+| `:[range]MP send` | Send the current line, or a range of lines, to the REPL |
+| `:MP send_buffer` | Send the whole buffer to the REPL |
+| `:MP interrupt` | Stop running code on the device (Ctrl-C in the REPL) |
 
 ### Development Commands
 
@@ -230,6 +233,31 @@ already matches the device are skipped, so uploading again only sends what chang
 
 `:MP upload` uploads the current buffer the same way: `lib/led.py` goes to `:lib/led.py`. A file
 outside the project goes to the root of the device.
+
+### REPL
+
+`:MP repl` opens the REPL in a split at the bottom. It stays running when you go back to your code, and
+`:MP repl` again focuses it instead of starting another. Press `<Esc><Esc>` to leave terminal mode and
+`Ctrl-]` to quit mpremote.
+
+Sending code opens the REPL if needed and keeps you in your buffer. One line is typed in as if you
+entered it; several lines are sent in paste mode so the REPL's auto-indent doesn't change them, and
+indentation they all share is removed, so you can send the body of a function. Selections send whole lines.
+
+While the REPL is open, `:MP run` runs the buffer in it: it stops whatever is running first (Ctrl-C),
+then pastes the buffer. Other commands that talk to the device need the serial port, so close the REPL
+before using them.
+
+Suggested keymaps:
+
+```lua
+local mp = require('micropython_nvim')
+vim.keymap.set('n', '<leader>mr', mp.repl, { desc = 'MicroPython: REPL' })
+vim.keymap.set('n', '<leader>ml', mp.repl_send_line, { desc = 'MicroPython: send line' })
+vim.keymap.set('x', '<leader>ms', mp.repl_send_selection, { desc = 'MicroPython: send selection' })
+vim.keymap.set('n', '<leader>mb', mp.repl_send_buffer, { desc = 'MicroPython: send buffer' })
+vim.keymap.set('n', '<leader>mc', mp.repl_interrupt, { desc = 'MicroPython: stop running code' })
+```
 
 ### File Browser
 
