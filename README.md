@@ -46,7 +46,7 @@ N.B. If you open an existing project that has a `.micropython` configuration fil
 - **File browser** - browse, edit, delete, download and create files and folders on the device
 - **Device management** - list connected devices, reset, show device info and set its clock
 - **Packages** - install micropython-lib and GitHub packages on the device with `mip`
-- **Project initialization**
+- **Project initialization** with type stubs matched to the connected board, set up for pyright
 
 ## Requirements
 
@@ -192,11 +192,11 @@ All commands live under a single `:MP` command with tab completion: type `:MP <T
 
 | Command | Description |
 |---------|-------------|
-| `:MP init` | Initialize MicroPython project (creates pyproject.toml, selects board) |
-| `:MP install` | Install project dependencies with uv |
+| `:MP init` | Initialize MicroPython project (creates pyproject.toml, picks stubs for the connected board) |
+| `:MP install` | Install project dependencies with uv, and the stubs into `typings/` |
 | `:MP set_port` | Set the device port |
 | `:MP set_baud` | Set the baud rate (optional, mpremote auto-detects) |
-| `:MP set_stubs` | Set MicroPython stubs for your board |
+| `:MP set_stubs` | Switch the project's stubs (the connected board is suggested first) |
 | `:MP list_devices` | List connected MicroPython devices |
 | `:MP health` | Run `:checkhealth micropython_nvim` |
 
@@ -327,26 +327,39 @@ Steps to initialize a project:
 1. Create a new directory for your project
 2. Open Neovim in the project directory
 3. Run `:MP init` - this will:
-   - Prompt you to select your target board (RP2, ESP32, etc.)
+   - Detect the connected board and suggest its stubs (see Type Stubs below)
    - Create `pyproject.toml` with dependencies and stubs
    - Create `main.py` - starter blink program
    - Create `.micropython` - device configuration
-   - Create `pyrightconfig.json` - LSP configuration
+   - Create `pyrightconfig.json` - LSP configuration that uses the stubs
    - Create `.gitignore`
-   - Optionally run `uv sync` to install dependencies
+   - Optionally run `uv sync` to install dependencies and the stubs
 
-4. If you skipped the install prompt, run `:MP install` to install dependencies
+4. If you skipped the install prompt, run `:MP install` to install dependencies and the stubs
 5. Run `:MP set_port` to set the port (or use `auto` for auto-detection)
 
-### Supported Boards
+### Type Stubs
 
-| Board | Stub Package |
-|-------|--------------|
-| Raspberry Pi Pico (RP2) | `micropython-rp2-stubs` |
-| ESP32 | `micropython-esp32-stubs` |
-| ESP8266 | `micropython-esp8266-stubs` |
-| STM32 / Pyboard | `micropython-stm32-stubs` |
-| SAMD (Wio Terminal) | `micropython-samd-stubs` |
+Completion and diagnostics for `machine`, `network`, `rp2` and the rest come from the
+[micropython-stubs](https://github.com/Josverl/micropython-stubs) packages.
+
+With a device connected, `:MP init` and `:MP set_stubs` read the board and MicroPython version
+from it and suggest matching stubs first: the board package (for example
+`micropython-rp2-rpi_pico_w-stubs==1.24.1.*`), then the port package (`micropython-rp2-stubs`).
+Suggestions are checked against PyPI. A version is pinned only when stubs exist for it, and a
+board package is suggested only when one is published. Without a device, or to pick something
+else, choose from the full list below the suggestions.
+
+The chosen stubs are declared in `pyproject.toml` (or `requirements.txt`) and installed into
+`typings/`. `pyrightconfig.json` sets `"stubPath": "typings"`. pyright looks there before its
+own CPython standard library, so MicroPython's `time.sleep_ms` and friends resolve too.
+`typings/` is git-ignored and excluded from checking.
+
+`:MP set_stubs` updates an existing project the same way. It adds `stubPath` to an existing
+`pyrightconfig.json`, and creates one unless `pyproject.toml` has a `[tool.pyright]` section.
+
+Installing the stubs needs [uv](https://docs.astral.sh/uv/). Without it, run
+`pip install --target typings <stubs>` yourself.
 
 ### Configuration File
 

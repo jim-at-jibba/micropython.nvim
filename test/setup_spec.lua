@@ -1,4 +1,5 @@
 local helpers = require('test.helpers')
+local fixtures = require('test.fixtures')
 
 describe('micropython_nvim.setup', function()
   local Setup
@@ -47,35 +48,165 @@ describe('micropython_nvim.setup', function()
     end)
   end)
 
-  describe('STUB_OPTIONS', function()
-    it('should be a table', function()
-      assert.is_table(Setup.STUB_OPTIONS)
-    end)
+  describe('set_stubs', function()
+    local original_cwd
+    local installed
+    local notifications
+    local restore_notify
 
-    it('should have multiple options', function()
-      assert.is_true(#Setup.STUB_OPTIONS > 0)
-    end)
-
-    it('should contain rp2 stubs', function()
-      assert.is_true(vim.tbl_contains(Setup.STUB_OPTIONS, 'micropython-rp2-stubs'))
-    end)
-
-    it('should contain esp32 stubs', function()
-      assert.is_true(vim.tbl_contains(Setup.STUB_OPTIONS, 'micropython-esp32-stubs'))
-    end)
-
-    it('should contain esp8266 stubs', function()
-      assert.is_true(vim.tbl_contains(Setup.STUB_OPTIONS, 'micropython-esp8266-stubs'))
-    end)
-
-    it('should contain stm32 stubs', function()
-      assert.is_true(vim.tbl_contains(Setup.STUB_OPTIONS, 'micropython-stm32-stubs'))
-    end)
-
-    it('should have all values following naming convention', function()
-      for _, stub in ipairs(Setup.STUB_OPTIONS) do
-        assert.is_true(stub:match('^micropython%-.*%-stubs$') ~= nil)
+    ---Pick `choice` whenever stubs are chosen
+    ---@param choice string?
+    local function choose(choice)
+      local Stubs = require('micropython_nvim.stubs')
+      Stubs.choose = function(on_choice)
+        on_choice(choice)
       end
+      Stubs.install = function(requirement)
+        installed = requirement
+      end
+    end
+
+    before_each(function()
+      original_cwd = vim.fn.getcwd()
+      installed = nil
+      notifications, restore_notify = helpers.mock_vim_notify()
+    end)
+
+    after_each(function()
+      restore_notify()
+      vim.fn.chdir(original_cwd)
+    end)
+
+    it('should switch the stubs in pyproject.toml and install them', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile(vim.split(fixtures.pyproject_toml, '\n'), dir .. '/pyproject.toml')
+        choose('micropython-esp32-stubs==1.24.1.*')
+
+        Setup.set_stubs()
+
+        local pyproject = table.concat(vim.fn.readfile(dir .. '/pyproject.toml'), '\n')
+        assert.is_truthy(pyproject:find('"micropython-esp32-stubs==1.24.1.*",', 1, true))
+        assert.is_nil(pyproject:find('micropython-rp2-stubs', 1, true))
+        assert.equals('micropython-esp32-stubs==1.24.1.*', installed)
+      end)
+    end)
+
+    it('should switch the stubs in requirements.txt', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile(vim.split(fixtures.requirements_txt, '\n'), dir .. '/requirements.txt')
+        choose('micropython-esp32-stubs')
+
+        Setup.set_stubs()
+
+        assert.same(
+          { 'mpremote', 'micropython-esp32-stubs', '' },
+          vim.fn.readfile(dir .. '/requirements.txt')
+        )
+      end)
+    end)
+
+    it('should point an existing pyright config at the stubs', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile(vim.split(fixtures.pyproject_toml, '\n'), dir .. '/pyproject.toml')
+        vim.fn.writefile(
+          { '{', '  "reportMissingModuleSource": false', '}' },
+          dir .. '/pyrightconfig.json'
+        )
+        choose('micropython-esp32-stubs')
+
+        Setup.set_stubs()
+
+        local config = vim.json.decode(table.concat(vim.fn.readfile(dir .. '/pyrightconfig.json')))
+        assert.equals('typings', config.stubPath)
+        assert.is_true(vim.tbl_contains(config.exclude, 'typings'))
+        assert.is_false(config.reportMissingModuleSource)
+      end)
+    end)
+
+    it('should keep the excludes an existing pyright config sets', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile(vim.split(fixtures.pyproject_toml, '\n'), dir .. '/pyproject.toml')
+        vim.fn.writefile({ '{ "exclude": ["build"] }' }, dir .. '/pyrightconfig.json')
+        choose('micropython-esp32-stubs')
+
+        Setup.set_stubs()
+
+        local config = vim.json.decode(table.concat(vim.fn.readfile(dir .. '/pyrightconfig.json')))
+        assert.same({ stubPath = 'typings', exclude = { 'build' } }, config)
+      end)
+    end)
+
+    it('should leave a pyright config that already sets the stub path', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile(vim.split(fixtures.pyproject_toml, '\n'), dir .. '/pyproject.toml')
+        vim.fn.writefile({ '{ "stubPath": "stubs" }' }, dir .. '/pyrightconfig.json')
+        choose('micropython-esp32-stubs')
+
+        Setup.set_stubs()
+
+        assert.same({ '{ "stubPath": "stubs" }' }, vim.fn.readfile(dir .. '/pyrightconfig.json'))
+      end)
+    end)
+
+    it('should create a pyright config when the project has none', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile(vim.split(fixtures.pyproject_toml, '\n'), dir .. '/pyproject.toml')
+        choose('micropython-esp32-stubs')
+
+        Setup.set_stubs()
+
+        local config = vim.json.decode(table.concat(vim.fn.readfile(dir .. '/pyrightconfig.json')))
+        assert.equals('typings', config.stubPath)
+      end)
+    end)
+
+    it('should not create a pyright config when pyproject.toml configures pyright', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile(
+          vim.list_extend(vim.split(fixtures.pyproject_toml, '\n'), { '[tool.pyright]' }),
+          dir .. '/pyproject.toml'
+        )
+        choose('micropython-esp32-stubs')
+
+        Setup.set_stubs()
+
+        assert.equals(0, vim.fn.filereadable(dir .. '/pyrightconfig.json'))
+      end)
+    end)
+
+    it('should change nothing when the picker is cancelled', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile(vim.split(fixtures.pyproject_toml, '\n'), dir .. '/pyproject.toml')
+        choose(nil)
+
+        Setup.set_stubs()
+
+        assert.same(
+          vim.split(fixtures.pyproject_toml, '\n'),
+          vim.fn.readfile(dir .. '/pyproject.toml')
+        )
+        assert.is_nil(installed)
+      end)
+    end)
+
+    it('should ask for a project first when there is none', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        choose('micropython-esp32-stubs')
+
+        Setup.set_stubs()
+
+        assert.is_truthy(notifications[1].msg:find(':MP init', 1, true))
+        assert.is_nil(installed)
+      end)
     end)
   end)
 
