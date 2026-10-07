@@ -47,6 +47,7 @@ describe('micropython_nvim.repl', function()
   end)
 
   after_each(function()
+    vim.cmd('stopinsert')
     Repl.close()
     vim.cmd('silent! only')
     vim.cmd('enew!')
@@ -151,8 +152,10 @@ describe('micropython_nvim.repl', function()
       require('micropython_nvim.mpremote').argv = function()
         return { 'sh', '-c', 'exit 0' }
       end
-      Repl.open()
-      local buf = vim.api.nvim_get_current_buf()
+      -- Started without focus: headless Neovim in terminal mode would wait for a key once it exits
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, { 'x = 1' })
+      Repl.send_line()
+      local old_repl = vim.api.nvim_win_get_buf(repl_windows()[1])
       vim.wait(2000, function()
         return not Repl.is_running()
       end)
@@ -161,7 +164,7 @@ describe('micropython_nvim.repl', function()
       Repl.open()
 
       assert.is_true(Repl.is_running())
-      assert.are_not.equal(buf, vim.api.nvim_get_current_buf())
+      assert.are_not.equal(old_repl, vim.api.nvim_get_current_buf())
     end)
 
     it('should report a missing mpremote and leave no window behind', function()
