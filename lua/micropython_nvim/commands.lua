@@ -4,6 +4,7 @@ local M = {}
 ---@field desc string Shown in the :MP picker and used for the legacy alias description
 ---@field impl fun(args: string[], range?: MicroPython.Range) Called with the arguments after the subcommand name
 ---@field complete? fun(arglead: string): string[] Completes the subcommand's own arguments
+---@field range? boolean Accepts a line range, as in :'<,'>MP send
 
 ---@class MicroPython.Range
 ---@field line1 integer
@@ -32,9 +33,10 @@ M.subcommands = {
   repl = { desc = 'Open the MicroPython REPL', impl = _facade('repl') },
   send = {
     desc = 'Send the current line, or a range of lines, to the REPL',
+    range = true,
     impl = function(_, range)
       if range then
-        require('micropython_nvim.repl').send_range(range.line1, range.line2)
+        require('micropython_nvim').repl_send_range(range.line1, range.line2)
       else
         require('micropython_nvim').repl_send_line()
       end
@@ -100,6 +102,14 @@ local function _run(name, args, range)
   if not subcommand then
     vim.notify(
       string.format('Unknown subcommand "%s". Available: %s', name, table.concat(M.names(), ', ')),
+      vim.log.levels.ERROR,
+      { title = 'micropython.nvim' }
+    )
+    return
+  end
+  if range and not subcommand.range then
+    vim.notify(
+      string.format('"%s" does not take a line range', name),
       vim.log.levels.ERROR,
       { title = 'micropython.nvim' }
     )

@@ -242,7 +242,7 @@ Do not add new `:MPxxx` commands; `LEGACY_ALIASES` is only for pre-v3 names.
 ## Conventions
 - Config state: Use `config.lua` module instead of `_G` table
 - Command assembly: Build mpremote argv with `Mpremote.argv()`; use `Mpremote.command()` for shell-escaped terminal strings
-- Terminal usage: Use `Terminal.open(command)` (never call `Snacks.terminal` directly)
+- Terminal usage: Use `Terminal.open(command)` (never call `Snacks.terminal` directly); `Terminal.start` for a terminal in a window you manage, like the REPL split
 - Async operations: Use `Mpremote.run(args, { name, on_exit })`
 - File operations: Use `vim.fn` functions for file I/O in user-facing code, `io.*` for internals
 - Project root: All operations assume Neovim opened at project root

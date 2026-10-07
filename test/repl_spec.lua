@@ -79,6 +79,19 @@ describe('micropython_nvim.repl', function()
       assert.equals('x = 1\r', Repl.format_send({ '', '  ', 'x = 1', '' }))
     end)
 
+    it('should paste a single line that opens a block', function()
+      assert.equals('\5for i in range(3):\4', Repl.format_send({ 'for i in range(3):' }))
+      assert.equals(
+        '\5for i in range(3): print(i)\4',
+        Repl.format_send({ 'for i in range(3): print(i)' })
+      )
+      assert.equals('\5@micropython.native\4', Repl.format_send({ '@micropython.native' }))
+    end)
+
+    it('should type a single line that only starts like a keyword', function()
+      assert.equals('format = 1\r', Repl.format_send({ 'format = 1' }))
+    end)
+
     it('should return nil when there is nothing to send', function()
       assert.is_nil(Repl.format_send({}))
       assert.is_nil(Repl.format_send({ '', '   ' }))
@@ -258,6 +271,29 @@ describe('micropython_nvim.repl', function()
       assert.equals('\3', wait_for_received('\3'))
     end)
 
+    it('should interrupt ahead of text still being sent', function()
+      Repl.open()
+      vim.cmd('wincmd p')
+      local lines = {}
+      for i = 1, 200 do
+        table.insert(lines, string.format('value_%03d = %d', i, i))
+      end
+      vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
+      vim.wait(2000, function()
+        return vim.fn.filereadable(out) == 1
+      end)
+
+      Repl.send_buffer()
+      Repl.interrupt()
+
+      local received = ''
+      vim.wait(2000, function()
+        received = table.concat(vim.fn.readfile(out, 'b'), '\n')
+        return received:find('\3', 1, true) ~= nil
+      end, 20)
+      assert.is_true(#received < 256)
+    end)
+
     it('should warn when interrupting without a REPL', function()
       local notifications, restore = helpers.mock_vim_notify()
       Repl.interrupt()
@@ -304,6 +340,14 @@ describe('micropython_nvim.repl', function()
       vim.api.nvim_win_set_cursor(0, { 2, 0 })
       vim.cmd('MP send')
       assert.equals('b = 2\r', wait_for_received('b = 2\r'))
+    end)
+
+    it('should refuse a range for a subcommand that does not take one', function()
+      local notifications, restore = helpers.mock_vim_notify()
+      vim.cmd('1MP repl')
+      restore()
+      assert.is_truthy(notifications[1].msg:find('does not take a line range'))
+      assert.equals(0, #repl_windows())
     end)
 
     it('should interrupt with :MP interrupt', function()

@@ -1,4 +1,5 @@
 local Mpremote = require('micropython_nvim.mpremote')
+local Terminal = require('micropython_nvim.terminal')
 local Utils = require('micropython_nvim.utils')
 
 local M = {}
@@ -11,18 +12,18 @@ local SPLIT_HEIGHT = 15
 -- Sent in small pieces so a device's serial receive buffer is not overrun
 local CHUNK_SIZE = 128
 local CHUNK_DELAY_MS = 20
+-- Time for interrupted code to print its traceback and return to the prompt
+local INTERRUPT_SETTLE_MS = 200
 
 local state = {
   ---@type integer?
   buf = nil,
   ---@type integer?
   job = nil,
-  -- mpremote ignores input until it has connected; text waits for its first output
+  -- mpremote ignores input until it has connected; the outbox waits for its first output
   ready = false,
-  ---@type string[]
-  pending = {},
-  -- Chunks still to be written, in order
-  ---@type string[]
+  -- Chunks still to be written, in order, each with the pause that follows it
+  ---@type { data: string, delay: integer }[]
   outbox = {},
   sending = false,
 }
@@ -56,34 +57,43 @@ local function _scroll_to_end()
   end
 end
 
-local function _write_next_chunk()
+---@param job integer the REPL this loop writes to; a restarted REPL stops the old loop
+local function _write_next_chunk(job)
+  if state.job ~= job then
+    return
+  end
   if not M.is_running() or #state.outbox == 0 then
     state.outbox = {}
     state.sending = false
     return
   end
   state.sending = true
-  vim.api.nvim_chan_send(state.job, table.remove(state.outbox, 1))
+  local chunk = table.remove(state.outbox, 1)
+  vim.api.nvim_chan_send(job, chunk.data)
   _scroll_to_end()
-  vim.defer_fn(_write_next_chunk, CHUNK_DELAY_MS)
+  vim.defer_fn(function()
+    _write_next_chunk(job)
+  end, chunk.delay)
 end
 
+local function _start_writing()
+  if state.ready and not state.sending then
+    _write_next_chunk(state.job)
+  end
+end
+
+---Queue keystrokes for the REPL
 ---@param data string
-local function _write(data)
+---@param settle_ms? integer pause after the last chunk
+local function _write(data, settle_ms)
   for i = 1, #data, CHUNK_SIZE do
-    table.insert(state.outbox, data:sub(i, i + CHUNK_SIZE - 1))
+    local last = i + CHUNK_SIZE > #data
+    table.insert(state.outbox, {
+      data = data:sub(i, i + CHUNK_SIZE - 1),
+      delay = last and settle_ms or CHUNK_DELAY_MS,
+    })
   end
-  if not state.sending then
-    _write_next_chunk()
-  end
-end
-
-local function _flush_pending()
-  state.ready = true
-  for _, data in ipairs(state.pending) do
-    _write(data)
-  end
-  state.pending = {}
+  _start_writing()
 end
 
 ---Show the REPL buffer in a split at the bottom
@@ -109,38 +119,31 @@ local function _start()
   local buf = vim.api.nvim_get_current_buf()
   state.buf = buf
   state.ready = false
-  state.pending = {}
   state.outbox = {}
   state.sending = false
 
-  local job_opts = {
+  local argv = Mpremote.argv({ 'repl' })
+  local job = Terminal.start(argv, {
     on_stdout = function()
       if not state.ready and state.buf == buf then
-        _flush_pending()
+        state.ready = true
+        _start_writing()
       end
     end,
     on_exit = function()
-      if state.buf == buf then
-        state.job = nil
+      if state.buf ~= buf then
+        return
       end
+      if #state.outbox > 0 then
+        _notify('The REPL exited before all the code was sent', vim.log.levels.WARN)
+      end
+      state.job, state.outbox, state.sending = nil, {}, false
     end,
-  }
-  local argv = Mpremote.argv({ 'repl' })
-  local ok, job
-  if vim.fn.has('nvim-0.11') == 1 then
-    job_opts.term = true
-    ok, job = pcall(vim.fn.jobstart, argv, job_opts)
-  else
-    ok, job = pcall(vim.fn.termopen, argv, job_opts)
-  end
-  if not ok or job <= 0 then
+  })
+  if not job then
     vim.api.nvim_buf_delete(buf, { force = true })
     state.buf = nil
-    local hint = argv[1] == 'uv' and 'uv sync' or 'pip install mpremote'
-    _notify(
-      string.format('mpremote not found (%s). Install with: %s', argv[1], hint),
-      vim.log.levels.ERROR
-    )
+    _notify(Mpremote.not_found_message(argv), vim.log.levels.ERROR)
     return false
   end
   state.job = job
@@ -214,6 +217,31 @@ local function _dedent(lines)
   end, lines)
 end
 
+local BLOCK_KEYWORDS = {
+  'if',
+  'elif',
+  'else',
+  'for',
+  'while',
+  'def',
+  'class',
+  'with',
+  'try',
+  'except',
+  'finally',
+  'async',
+}
+
+---Whether a line is a compound statement, which the REPL would wait to see the end of
+---@param line string
+---@return boolean
+local function _opens_block(line)
+  local word = line:match('^([%a_]+)')
+  return line:find(':%s*$') ~= nil
+    or line:sub(1, 1) == '@'
+    or (word ~= nil and vim.tbl_contains(BLOCK_KEYWORDS, word))
+end
+
 ---The keystrokes that enter source lines at the REPL: one line is typed, several are pasted
 ---in paste mode so the REPL's auto-indent does not change them. Returns nil for blank text.
 ---@param lines string[]
@@ -231,7 +259,7 @@ function M.format_send(lines)
   end
 
   lines = _dedent(vim.list_slice(lines, first, last))
-  if #lines == 1 then
+  if #lines == 1 and not _opens_block(lines[1]) then
     return lines[1] .. ENTER
   end
   return CTRL_E .. table.concat(lines, ENTER) .. CTRL_D
@@ -239,14 +267,10 @@ end
 
 ---Type keystrokes into the REPL, opening it without leaving the current window
 ---@param data string
-local function _send(data)
-  if not _ensure(false) then
-    return
-  end
-  if state.ready then
-    _write(data)
-  else
-    table.insert(state.pending, data)
+---@param settle_ms? integer pause before anything sent after this
+local function _send(data, settle_ms)
+  if _ensure(false) then
+    _write(data, settle_ms)
   end
 end
 
@@ -300,14 +324,17 @@ function M.interrupt()
     _notify('The REPL is not open. Run :MP repl first.', vim.log.levels.WARN)
     return
   end
-  _send(CTRL_C)
+  -- Ahead of anything still queued, which it would only interrupt
+  state.outbox = {}
+  _send(CTRL_C, INTERRUPT_SETTLE_MS)
 end
 
 ---Stop whatever is running and run the current buffer in the REPL
 function M.run_buffer()
   local data = M.format_send(vim.api.nvim_buf_get_lines(0, 0, -1, false))
   if data then
-    _send(CTRL_C .. data)
+    _send(CTRL_C, INTERRUPT_SETTLE_MS)
+    _send(data)
   end
 end
 

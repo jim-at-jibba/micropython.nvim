@@ -300,14 +300,17 @@ go back to your code, and `:MP repl` again focuses it instead of starting
 another. Press `<Esc><Esc>` to leave terminal mode and `Ctrl-]` to quit
 mpremote.
 
-Sending code opens the REPL if needed and keeps you in your buffer. One line is
-typed in as if you entered it; several lines are sent in paste mode so the
-REPL’s auto-indent doesn’t change them, and indentation they all share is
-removed, so you can send the body of a function. Selections send whole lines.
+Sending code opens the REPL if needed and keeps you in your buffer. A simple
+line is typed in as if you entered it. Several lines, or a line like `for i in
+range(3): print(i)`, are sent in paste mode so the REPL’s auto-indent
+doesn’t change them. Indentation they all share is removed, so you can send
+the body of a function. Selections send whole lines. `:MP interrupt` skips
+anything still being sent.
 
 While the REPL is open, `:MP run` runs the buffer in it: it stops whatever is
-running first (Ctrl-C), then pastes the buffer. Other commands that talk to the
-device need the serial port, so close the REPL before using them.
+running first (Ctrl-C), waits a moment for the prompt, then pastes the buffer.
+Other commands that talk to the device need the serial port, so close the REPL
+before using them.
 
 Suggested keymaps:
 
