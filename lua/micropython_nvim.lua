@@ -98,6 +98,15 @@ function M.files()
   require('micropython_nvim.files').open()
 end
 
+function M.info()
+  require('micropython_nvim.device').info()
+end
+
+---@param args string[] package, then an optional target directory on the device
+function M.mip(args)
+  require('micropython_nvim.device').mip(args)
+end
+
 function M.run_main()
   require('micropython_nvim.run').run_main()
 end

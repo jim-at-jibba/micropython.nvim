@@ -44,7 +44,8 @@ N.B. If you open an existing project that has a `.micropython` configuration fil
 - **Sync** mount local directory for live development without uploading
 - **REPL** in a persistent split: send the current line, a selection or the whole buffer, and stop running code
 - **File browser** - browse, edit, delete, download and create files and folders on the device
-- **Device management** - list connected devices, reset
+- **Device management** - list connected devices, reset, show device info and set its clock
+- **Packages** - install micropython-lib and GitHub packages on the device with `mip`
 - **Project initialization**
 
 ## Requirements
@@ -175,6 +176,8 @@ All commands live under a single `:MP` command with tab completion: type `:MP <T
 | `:MP sync` | Mount local directory on device for live development |
 | `:MP reset` | Soft reset the device |
 | `:MP hard_reset` | Hard reset the device |
+| `:MP info` | Show firmware, board, storage and clock; press `s` to set the device clock |
+| `:MP mip <package> [target]` | Install a package on the device with mip |
 
 ### File Management
 
@@ -279,6 +282,26 @@ An `mp://<path>` buffer holds a file from the device: edit it and `:w` writes it
 open one directly, for example `:e mp://lib/led.py`. Binary files can't be edited. If a file can't be read, its buffer
 stays read-only, so `:w` can never replace a device file with an empty one. Actions that work on a folder use the folder
 under the cursor, the folder of the file under the cursor, or the device root on the header lines.
+
+### Device Info
+
+`:MP info` shows the device's port, firmware version, board, storage used and free, and its clock. Press `s`
+in the window to set the device clock to this computer's time (`mpremote rtc --set`), or `q` to close it.
+
+### Installing Packages
+
+`:MP mip <package>` installs a package onto the device with
+[mip](https://docs.micropython.org/en/latest/reference/packages.html), in the background. The package is downloaded
+by your computer, so the device doesn't need a network connection.
+
+```vim
+:MP mip aioble                    " from micropython-lib
+:MP mip github:org/repo           " from GitHub (also gitlab:)
+:MP mip github:org/repo@v1.2      " a branch or tag
+:MP mip umqtt.simple lib/mqtt     " into a directory on the device (default: lib)
+```
+
+`<Tab>` completes common micropython-lib packages, and `:MP mip` with no package offers a picker of them.
 
 ### Upload Ignore List
 

@@ -44,6 +44,19 @@ M.subcommands = {
   },
   send_buffer = { desc = 'Send the whole buffer to the REPL', impl = _facade('repl_send_buffer') },
   interrupt = { desc = 'Stop running code on the device', impl = _facade('repl_interrupt') },
+  info = {
+    desc = 'Show firmware, board, storage and clock of the device',
+    impl = _facade('info'),
+  },
+  mip = {
+    desc = 'Install a package on the device: mip <package> [target directory]',
+    impl = function(args)
+      require('micropython_nvim').mip(args)
+    end,
+    complete = function(arglead)
+      return require('micropython_nvim.device').mip_complete(arglead)
+    end,
+  },
   sync = { desc = 'Mount the project directory on the device', impl = _facade('sync') },
   reset = { desc = 'Soft reset the device', impl = _facade('soft_reset') },
   hard_reset = { desc = 'Hard reset the device', impl = _facade('hard_reset') },
