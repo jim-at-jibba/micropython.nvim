@@ -242,12 +242,13 @@ space on the device. It loads in the background, so Neovim stays responsive whil
 | `d` | Delete the file or folder under the cursor (asks first) |
 | `D` | Download the file under the cursor into the project, at the same path |
 | `a` | Create a folder in the folder under the cursor |
-| `u` | Upload the file you opened the browser from into the folder under the cursor |
+| `u` | Upload the file you opened the browser from into the folder under the cursor (save it first) |
 | `R` | Refresh |
 | `q` | Close |
 
 An `mp://<path>` buffer holds a file from the device: edit it and `:w` writes it back. You can also
-open one directly, for example `:e mp://lib/led.py`. Actions that work on a folder use the folder
+open one directly, for example `:e mp://lib/led.py`. Binary files can't be edited. If a file can't be read, its buffer
+stays read-only, so `:w` can never replace a device file with an empty one. Actions that work on a folder use the folder
 under the cursor, the folder of the file under the cursor, or the device root on the header lines.
 
 ### Upload Ignore List

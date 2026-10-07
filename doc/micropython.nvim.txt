@@ -307,7 +307,8 @@ stays responsive while the device answers.
                               cursor
 
   u                           Upload the file you opened the browser from
-                              into the folder under the cursor
+                              into the folder under the cursor (save it
+                              first)
 
   R                           Refresh
 
@@ -315,8 +316,10 @@ stays responsive while the device answers.
   -----------------------------------------------------------------------
 An `mp://<path>` buffer holds a file from the device: edit it and `:w` writes
 it back. You can also open one directly, for example `:e mp://lib/led.py`.
-Actions that work on a folder use the folder under the cursor, the folder of
-the file under the cursor, or the device root on the header lines.
+Binary files can’t be edited. If a file can’t be read, its buffer stays
+read-only, so `:w` can never replace a device file with an empty one. Actions
+that work on a folder use the folder under the cursor, the folder of the file
+under the cursor, or the device root on the header lines.
 
 
 UPLOAD IGNORE LIST ~

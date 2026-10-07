@@ -1,6 +1,7 @@
 local Config = require('micropython_nvim.config')
 local Utils = require('micropython_nvim.utils')
 local Mpremote = require('micropython_nvim.mpremote')
+local UI = require('micropython_nvim.ui')
 
 local M = {}
 
@@ -17,9 +18,14 @@ local M = {}
 local BROWSER_NAME = 'micropython://files'
 local PREFIX = 'mp://'
 local HELP = '<CR> open  d delete  D download  a mkdir  u upload  R refresh  q close'
+-- Gap between the longest name and the size column, and the width sizes are right-aligned to
+local SIZE_GAP = 2
+local SIZE_WIDTH = 10
+-- How long quitting Neovim waits for mp:// writes still in flight
+local WRITE_WAIT_MS = 10000
 
--- Walks the device filesystem: one `D|F <tab> size <tab> path` line per entry,
--- then `S <tab> total <tab> free` when statvfs is available
+-- Walks the device filesystem from the current directory: one `D|F <tab> size <tab> path` line
+-- per entry, then `S <tab> total <tab> free` when statvfs is available
 local LIST_CODE = [[
 import os
 def w(p):
@@ -32,7 +38,7 @@ def w(p):
    print('F\t%d\t%s' % (e[3] if len(e) > 3 else os.stat(f)[6], f))
 w('')
 try:
- s = os.statvfs('/')
+ s = os.statvfs('.')
  print('S\t%d\t%d' % (s[0] * s[2], s[0] * s[3]))
 except Exception:
  pass]]
@@ -45,6 +51,8 @@ local state = {
   source = nil,
   ---@type table<integer, MicroPython.DeviceEntry>
   entries_by_line = {},
+  ---mp:// writes still running
+  pending_writes = 0,
 }
 
 ---@param msg string
@@ -53,12 +61,24 @@ local function _notify(msg, level)
   vim.notify(msg, level, { title = 'micropython.nvim' })
 end
 
+---Ask a yes/no question; on_yes runs only for an explicit yes
+---@param question string
+---@param on_yes fun()
+local function _confirm(question, on_yes)
+  UI.select({ 'Yes', 'No' }, { prompt = question }, function(choice)
+    if choice == 'Yes' then
+      on_yes()
+    end
+  end)
+end
+
 ---Parse the output of the device listing code
 ---@param output string
 ---@return MicroPython.DeviceListing
 function M.parse_listing(output)
   local listing = { entries = {} }
-  for line in vim.gsplit(output, '\n') do
+  -- The device prints \r\n line endings
+  for line in vim.gsplit(output:gsub('\r', ''), '\n') do
     local kind, size, path = line:match('^([DF])\t(%d+)\t(.+)$')
     if kind then
       table.insert(listing.entries, { path = path, dir = kind == 'D', size = tonumber(size) })
@@ -98,7 +118,8 @@ end
 ---@return string[] lines, table<integer, MicroPython.DeviceEntry> entries_by_line
 local function _render(listing)
   local device = 'Device ' .. Config.get_port()
-  if listing.free then
+  -- Some ports report zeros for filesystems they cannot measure
+  if listing.total and listing.total > 0 then
     device = string.format(
       '%s  ·  %s free of %s',
       device,
@@ -119,7 +140,8 @@ local function _render(listing)
     local line = labels[i]
     if not entry.dir then
       local size = _format_size(entry.size)
-      line = line .. string.rep(' ', width - vim.fn.strdisplaywidth(line) + 2 + 10 - #size) .. size
+      local padding = width - vim.fn.strdisplaywidth(line) + SIZE_GAP + SIZE_WIDTH - #size
+      line = line .. string.rep(' ', padding) .. size
     end
     table.insert(lines, line)
     entries_by_line[#lines] = entry
@@ -218,14 +240,14 @@ local function _delete_entry()
   if not entry then
     return
   end
-  local question = entry.dir and ('Delete ' .. entry.path .. '/ and everything in it?')
-    or ('Delete ' .. entry.path .. '?')
-  if vim.fn.confirm(question, '&Yes\n&No', 2) ~= 1 then
-    return
+  local question, args = 'Delete ' .. entry.path .. '?', { 'fs', 'rm', ':' .. entry.path }
+  if entry.dir then
+    question = 'Delete ' .. entry.path .. '/ and everything in it?'
+    args = { 'fs', 'rm', '-r', ':' .. entry.path }
   end
-  local args = entry.dir and { 'fs', 'rm', '-r', ':' .. entry.path }
-    or { 'fs', 'rm', ':' .. entry.path }
-  _run_and_refresh(args, 'Delete ' .. entry.path)
+  _confirm(question, function()
+    _run_and_refresh(args, 'Delete ' .. entry.path)
+  end)
 end
 
 local function _download_entry()
@@ -238,14 +260,15 @@ local function _download_entry()
     return
   end
   local destination = Utils.get_cwd() .. '/' .. entry.path
-  if
-    vim.fn.filereadable(destination) == 1
-    and vim.fn.confirm('Overwrite local ' .. entry.path .. '?', '&Yes\n&No', 2) ~= 1
-  then
-    return
+  local function download()
+    vim.fn.mkdir(vim.fs.dirname(destination), 'p')
+    Mpremote.run({ 'cp', ':' .. entry.path, destination }, { name = 'Download ' .. entry.path })
   end
-  vim.fn.mkdir(vim.fs.dirname(destination), 'p')
-  Mpremote.run({ 'cp', ':' .. entry.path, destination }, { name = 'Download ' .. entry.path })
+  if vim.fn.filereadable(destination) == 1 then
+    _confirm('Overwrite local ' .. entry.path .. '?', download)
+  else
+    download()
+  end
 end
 
 local function _make_dir()
@@ -263,8 +286,12 @@ end
 local function _upload_source()
   local source = state.source
   local path = source and vim.api.nvim_buf_is_valid(source) and vim.api.nvim_buf_get_name(source)
-  if not path or path == '' then
-    _notify('No local file to upload: open the browser from a file buffer', vim.log.levels.WARN)
+  if not path or path == '' or vim.fn.filereadable(path) ~= 1 then
+    _notify('No saved local file to upload: open the browser from a file', vim.log.levels.WARN)
+    return
+  end
+  if vim.bo[source].modified then
+    _notify('Save ' .. vim.fs.basename(path) .. ' before uploading it', vim.log.levels.WARN)
     return
   end
   local target = _join(_selected_dir(), vim.fs.basename(path))
@@ -279,6 +306,12 @@ end
 
 ---@return integer
 local function _create_browser()
+  -- A browser left over from before a plugin reload still holds the name
+  local stale = vim.fn.bufnr('^' .. BROWSER_NAME .. '$')
+  if stale > 0 then
+    vim.api.nvim_buf_delete(stale, { force = true })
+  end
+
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_name(buf, BROWSER_NAME)
   vim.bo[buf].bufhidden = 'hide'
@@ -325,14 +358,25 @@ local function _device_path(buf)
   return vim.api.nvim_buf_get_name(buf):sub(#PREFIX + 1)
 end
 
----Load an mp:// buffer from the device
+---Show a device file that could not be loaded; the buffer stays read-only so :w cannot
+---overwrite the device file with an empty one
 ---@param buf integer
-local function _read(buf)
+---@param msg string
+local function _read_failed(buf, msg)
+  _notify(msg, vim.log.levels.ERROR)
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].modified = false
+end
+
+---Load an mp:// buffer from the device (BufReadCmd)
+---@param buf integer
+function M.read(buf)
   local path = _device_path(buf)
   local tmp = vim.fn.tempname()
   vim.bo[buf].buftype = 'acwrite'
   vim.bo[buf].swapfile = false
   vim.bo[buf].modifiable = false
+  vim.b[buf].micropython_loaded = false
 
   Mpremote.run({ 'cp', ':' .. path, tmp }, {
     on_exit = function(result)
@@ -340,11 +384,10 @@ local function _read(buf)
         os.remove(tmp)
         return
       end
-      vim.bo[buf].modifiable = true
       if result.code ~= 0 then
-        _notify(
-          'Failed to read ' .. path .. ' from the device:\n' .. Mpremote.error_output(result),
-          vim.log.levels.ERROR
+        _read_failed(
+          buf,
+          'Failed to read ' .. path .. ' from the device:\n' .. Mpremote.error_output(result)
         )
         return
       end
@@ -357,59 +400,58 @@ local function _read(buf)
         table.remove(lines)
       end
 
+      vim.bo[buf].modifiable = true
       local undolevels = vim.bo[buf].undolevels
       vim.bo[buf].undolevels = -1
-      vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+      -- Lines holding NUL bytes (binary files) are rejected
+      local ok = pcall(vim.api.nvim_buf_set_lines, buf, 0, -1, false, lines)
       vim.bo[buf].undolevels = undolevels
+      if not ok then
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
+        _read_failed(buf, path .. ' looks like a binary file and cannot be edited')
+        return
+      end
+
       vim.bo[buf].eol = eol
       vim.bo[buf].fixeol = false
       vim.bo[buf].modified = false
+      vim.b[buf].micropython_loaded = true
       vim.bo[buf].filetype = vim.filetype.match({ filename = path, buf = buf }) or ''
     end,
   })
 end
 
----Write an mp:// buffer to the device
+---Wait for mp:// writes still running, so quitting does not cut them off
+function M.wait_for_writes()
+  vim.wait(WRITE_WAIT_MS, function()
+    return state.pending_writes == 0
+  end, 50)
+end
+
+---Write an mp:// buffer to the device (BufWriteCmd)
 ---@param buf integer
-local function _write(buf)
+function M.write(buf)
   local path = _device_path(buf)
+  if not vim.b[buf].micropython_loaded then
+    _notify(path .. ' was not loaded from the device, so it was not written', vim.log.levels.ERROR)
+    return
+  end
+
   local tmp = vim.fn.tempname()
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
   vim.fn.writefile(lines, tmp, vim.bo[buf].eol and '' or 'b')
-  local tick = vim.api.nvim_buf_get_changedtick(buf)
 
+  -- Marked written now so :wq works; restored if the device write fails
+  vim.bo[buf].modified = false
+  state.pending_writes = state.pending_writes + 1
   Mpremote.run({ 'cp', tmp, ':' .. path }, {
     name = 'Write ' .. path,
     on_exit = function(result)
+      state.pending_writes = state.pending_writes - 1
       os.remove(tmp)
-      if
-        result.code == 0
-        and vim.api.nvim_buf_is_valid(buf)
-        and vim.api.nvim_buf_get_changedtick(buf) == tick
-      then
-        vim.bo[buf].modified = false
+      if result.code ~= 0 and vim.api.nvim_buf_is_valid(buf) then
+        vim.bo[buf].modified = true
       end
-    end,
-  })
-end
-
----Read and write mp://<path> buffers from and to the device
-function M.setup_autocmds()
-  local group = vim.api.nvim_create_augroup('micropython_nvim_files', { clear = true })
-  vim.api.nvim_create_autocmd('BufReadCmd', {
-    group = group,
-    pattern = PREFIX .. '*',
-    desc = 'micropython.nvim: read a device file',
-    callback = function(event)
-      _read(event.buf)
-    end,
-  })
-  vim.api.nvim_create_autocmd('BufWriteCmd', {
-    group = group,
-    pattern = PREFIX .. '*',
-    desc = 'micropython.nvim: write a device file',
-    callback = function(event)
-      _write(event.buf)
     end,
   })
 end
