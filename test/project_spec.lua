@@ -192,8 +192,8 @@ describe('micropython_nvim.project', function()
         assert.is_true(Project.TEMPLATES.micropython_config:find('PORT') ~= nil)
       end)
 
-      it('should contain BAUD', function()
-        assert.is_true(Project.TEMPLATES.micropython_config:find('BAUD') ~= nil)
+      it('should not contain BAUD', function()
+        assert.is_nil(Project.TEMPLATES.micropython_config:find('BAUD'))
       end)
 
       it('should have auto as default port', function()

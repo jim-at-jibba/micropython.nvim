@@ -11,8 +11,6 @@ M.TEMPLATES = {
 # MicroPython project configuration
 # PORT can be: auto, /dev/ttyUSB0, /dev/ttyACM0, id:<serial>, etc.
 PORT=auto
-# BAUD is optional - mpremote auto-detects, but can be set for edge cases
-BAUD=115200
 ]],
 
   main = [[
@@ -117,18 +115,10 @@ local function _prompt_uv_sync(cwd)
   end
 end
 
-local function _check_legacy_files()
+local function _warn_requirements_txt()
   if Utils.requirements_exists() then
     vim.notify(
       'Found legacy requirements.txt. Consider removing after migration.',
-      vim.log.levels.WARN,
-      { title = 'micropython.nvim' }
-    )
-  end
-
-  if Utils.ampy_config_exists() then
-    vim.notify(
-      'Found legacy .ampy file. Consider removing it.',
       vim.log.levels.WARN,
       { title = 'micropython.nvim' }
     )
@@ -168,7 +158,7 @@ local function _create_project_files(stubs)
     _write_file_safe(file.path, file.content)
   end
 
-  _check_legacy_files()
+  _warn_requirements_txt()
 
   vim.notify('Project created with ' .. stubs, vim.log.levels.INFO, { title = 'micropython.nvim' })
 
@@ -235,7 +225,7 @@ function M.install()
 
   if not Utils.pyproject_exists() then
     vim.notify(
-      'No pyproject.toml found. Run :MPInit first.',
+      'No pyproject.toml found. Run :MP init first.',
       vim.log.levels.ERROR,
       { title = 'micropython.nvim' }
     )

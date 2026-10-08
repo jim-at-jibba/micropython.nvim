@@ -38,13 +38,3 @@ vim.api.nvim_create_autocmd('VimLeavePre', {
     end
   end,
 })
-
--- Legacy :MPxxx commands, kept as aliases for their :MP subcommand
-for legacy, subcommand in pairs(require('micropython_nvim.commands').LEGACY_ALIASES) do
-  vim.api.nvim_create_user_command(legacy, function(opts)
-    require('micropython_nvim.commands').dispatch(vim.list_extend({ subcommand }, opts.fargs))
-  end, {
-    nargs = subcommand == 'upload_all' and '*' or 0,
-    desc = 'Alias for :MP ' .. subcommand,
-  })
-end

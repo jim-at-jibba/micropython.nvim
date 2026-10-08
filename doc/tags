@@ -1,8 +1,10 @@
 micropython.nvim-micropython_nvim	micropython.nvim.txt	/*micropython.nvim-micropython_nvim*
+micropython.nvim-micropython_nvim-examples	micropython.nvim.txt	/*micropython.nvim-micropython_nvim-examples*
 micropython.nvim-micropython_nvim-features	micropython.nvim.txt	/*micropython.nvim-micropython_nvim-features*
 micropython.nvim-micropython_nvim-goals	micropython.nvim.txt	/*micropython.nvim-micropython_nvim-goals*
 micropython.nvim-micropython_nvim-installation	micropython.nvim.txt	/*micropython.nvim-micropython_nvim-installation*
 micropython.nvim-micropython_nvim-introduction	micropython.nvim.txt	/*micropython.nvim-micropython_nvim-introduction*
+micropython.nvim-micropython_nvim-migrating-from-v2	micropython.nvim.txt	/*micropython.nvim-micropython_nvim-migrating-from-v2*
 micropython.nvim-micropython_nvim-project-setup	micropython.nvim.txt	/*micropython.nvim-micropython_nvim-project-setup*
 micropython.nvim-micropython_nvim-quickstart	micropython.nvim.txt	/*micropython.nvim-micropython_nvim-quickstart*
 micropython.nvim-micropython_nvim-requirements	micropython.nvim.txt	/*micropython.nvim-micropython_nvim-requirements*

@@ -6,17 +6,6 @@ local UI = require('micropython_nvim.ui')
 
 local M = {}
 
----@type string[]
-M.BAUD_RATES = {
-  '1200',
-  '2400',
-  '4800',
-  '19200',
-  '38400',
-  '57600',
-  '115200',
-}
-
 ---@param on_devices fun(devices: MicroPython.Device[], err?: string)
 function M.list_devices(on_devices)
   Mpremote.run({ 'connect', 'list' }, {
@@ -89,50 +78,6 @@ function M.show_devices()
   end)
 end
 
-function M.set_baud_rate()
-  UI.select(M.BAUD_RATES, {
-    prompt = 'Select baud rate:',
-  }, function(choice)
-    if not choice then
-      return
-    end
-
-    Config.set_baud(choice)
-
-    local config_path = Utils.get_config_path()
-    if Utils.config_exists() then
-      local result = Utils.replace_line(config_path, 'BAUD', 'BAUD=' .. choice)
-      if result then
-        vim.notify(
-          'Baud rate set to: ' .. choice,
-          vim.log.levels.INFO,
-          { title = 'micropython.nvim' }
-        )
-      else
-        vim.notify('Failed to set baud rate', vim.log.levels.ERROR, { title = 'micropython.nvim' })
-      end
-    elseif Utils.ampy_config_exists() then
-      local ampy_path = Utils.get_ampy_path()
-      local result = Utils.replace_line(ampy_path, 'AMPY_BAUD', 'AMPY_BAUD=' .. choice)
-      if result then
-        vim.notify(
-          'Baud rate set to: ' .. choice,
-          vim.log.levels.INFO,
-          { title = 'micropython.nvim' }
-        )
-      else
-        vim.notify('Failed to set baud rate', vim.log.levels.ERROR, { title = 'micropython.nvim' })
-      end
-    else
-      vim.notify(
-        'No config file found. Run :MPInit first.',
-        vim.log.levels.WARN,
-        { title = 'micropython.nvim' }
-      )
-    end
-  end)
-end
-
 function M.set_port()
   _get_ports_list(function(ports)
     UI.select(ports, {
@@ -152,17 +97,9 @@ function M.set_port()
         else
           vim.notify('Failed to set port', vim.log.levels.ERROR, { title = 'micropython.nvim' })
         end
-      elseif Utils.ampy_config_exists() then
-        local ampy_path = Utils.get_ampy_path()
-        local result = Utils.replace_line(ampy_path, 'AMPY_PORT', 'AMPY_PORT=' .. choice)
-        if result then
-          vim.notify('Port set to: ' .. choice, vim.log.levels.INFO, { title = 'micropython.nvim' })
-        else
-          vim.notify('Failed to set port', vim.log.levels.ERROR, { title = 'micropython.nvim' })
-        end
       else
         vim.notify(
-          'No config file found. Run :MPInit first.',
+          'No config file found. Run :MP init first.',
           vim.log.levels.WARN,
           { title = 'micropython.nvim' }
         )

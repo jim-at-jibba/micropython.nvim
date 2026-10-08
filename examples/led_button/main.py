@@ -6,13 +6,12 @@ files and a lib/ directory for reusable modules.
 
 Usage with micropython.nvim:
   1. Open Neovim in this directory
-  2. Run :MPInit to create config (or copy .micropython from parent)
-  3. Run :MPSetPort to select your device
-  4. Run :MPUploadAll to upload all files to device
-  5. Run :MPRunMain to execute main.py on device
+  2. Run :MP set_port to select your device
+  3. Run :MP upload_all to upload all files to device
+  4. Run :MP run_main to run main.py on device
 
 For live development:
-  - Run :MPSync to mount this directory on device
+  - Run :MP sync to mount this directory on device
   - Changes to local files are immediately available on device
 """
 

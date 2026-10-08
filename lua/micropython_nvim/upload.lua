@@ -235,7 +235,7 @@ end
 
 ---@param path string
 local function _on_save(path)
-  if not (Utils.config_exists() or Utils.ampy_config_exists()) then
+  if not Utils.config_exists() then
     return
   end
   local relative = _project_relative(path)

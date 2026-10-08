@@ -117,13 +117,16 @@ describe('micropython_nvim.commands', function()
         'init',
         'install',
         'set_port',
-        'set_baud',
         'set_stubs',
         'list_devices',
         'health',
       }) do
         assert.is_true(vim.tbl_contains(names, name), name)
       end
+    end)
+
+    it('should not offer a baud rate setting', function()
+      assert.is_nil(Commands.subcommands.set_baud)
     end)
 
     it('should not complete subcommand names after the subcommand', function()
@@ -156,11 +159,11 @@ describe('micropython_nvim.commands', function()
       assert.same(Commands.names(), vim.fn.getcompletion('MP ', 'cmdline'))
     end)
 
-    it('should keep every legacy :MPxxx command as an alias', function()
-      local commands = vim.api.nvim_get_commands({})
-      for legacy in pairs(Commands.LEGACY_ALIASES) do
-        assert.is_not_nil(commands[legacy], legacy)
-      end
+    it('should register :MP as the only command', function()
+      local names = vim.tbl_filter(function(name)
+        return vim.startswith(name, 'MP')
+      end, vim.tbl_keys(vim.api.nvim_get_commands({})))
+      assert.same({ 'MP' }, names)
     end)
 
     it('should route :MP <subcommand> through dispatch', function()
@@ -170,9 +173,9 @@ describe('micropython_nvim.commands', function()
       assert.equals(1, #calls)
     end)
 
-    it('should route legacy :MPUploadAll arguments through dispatch', function()
+    it('should route :MP upload_all arguments through dispatch', function()
       local calls, restore = spy_facade('upload_all')
-      vim.cmd('MPUploadAll test.py')
+      vim.cmd('MP upload_all test.py')
       restore()
       assert.same({ { args = 'test.py' } }, calls[1])
     end)

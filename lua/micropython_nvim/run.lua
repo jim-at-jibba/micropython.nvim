@@ -35,21 +35,25 @@ local function _get_device_files(on_files)
   })
 end
 
+---Run a local file on the device
+---@param path string
+---@param lines string[] The file's code, sent to the REPL when it is open
+local function _run_file(path, lines)
+  -- The REPL holds the serial port, so run through it when it is open
+  local Repl = require('micropython_nvim.repl')
+  if Repl.is_running() then
+    Repl.run_lines(lines)
+    return
+  end
+
+  Terminal.open(Mpremote.command({ 'run', path }) .. ' 2>&1; ' .. Utils.PRESS_ENTER_PROMPT)
+end
+
 function M.run()
   if not Utils.check_port_configured() then
     return
   end
-
-  -- The REPL holds the serial port, so run through it when it is open
-  local Repl = require('micropython_nvim.repl')
-  if Repl.is_running() then
-    Repl.run_buffer()
-    return
-  end
-
-  local file_path = vim.api.nvim_buf_get_name(0)
-  local command = Mpremote.command({ 'run', file_path }) .. '; ' .. Utils.PRESS_ENTER_PROMPT
-  Terminal.open(command)
+  _run_file(vim.api.nvim_buf_get_name(0), vim.api.nvim_buf_get_lines(0, 0, -1, false))
 end
 
 function M.sync()
@@ -123,15 +127,23 @@ function M.list_files()
   Terminal.open(command)
 end
 
+---Run the project's local main.py, as the device would at boot
 function M.run_main()
   if not Utils.check_port_configured() then
     return
   end
 
-  local command = Mpremote.command({ 'exec', "exec(open('main.py').read())" })
-    .. '; '
-    .. Utils.PRESS_ENTER_PROMPT
-  Terminal.open(command)
+  local main = Utils.get_cwd() .. '/main.py'
+  if vim.fn.filereadable(main) ~= 1 then
+    vim.notify(
+      'No main.py in ' .. Utils.get_cwd() .. '. Open Neovim at the project root.',
+      vim.log.levels.WARN,
+      { title = 'micropython.nvim' }
+    )
+    return
+  end
+
+  _run_file(main, vim.fn.readfile(main))
 end
 
 return M

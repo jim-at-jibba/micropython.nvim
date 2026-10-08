@@ -13,28 +13,25 @@ describe('micropython_nvim.config', function()
     it('should use defaults when no options provided', function()
       Config.setup()
       assert.equals('auto', Config.get_port())
-      assert.equals('115200', Config.get_baud())
       assert.is_false(Config.is_debug())
+    end)
+
+    it('should have no baud rate setting', function()
+      Config.setup({})
+      assert.is_nil(Config.config.baud)
+      assert.is_nil(Config.get_baud)
     end)
 
     it('should use defaults with empty options', function()
       Config.setup({})
       assert.equals('auto', Config.get_port())
-      assert.equals('115200', Config.get_baud())
       assert.is_false(Config.is_debug())
     end)
 
     it('should merge user options with defaults', function()
-      Config.setup({ port = '/dev/ttyUSB0', baud = 9600, debug = true })
+      Config.setup({ port = '/dev/ttyUSB0', debug = true })
       assert.equals('/dev/ttyUSB0', Config.get_port())
-      assert.equals('9600', Config.get_baud())
       assert.is_true(Config.is_debug())
-    end)
-
-    it('should convert numeric baud to string', function()
-      Config.setup({ baud = 9600 })
-      assert.equals('9600', Config.get_baud())
-      assert.is_string(Config.get_baud())
     end)
 
     it('should preserve ui config', function()
@@ -70,25 +67,6 @@ describe('micropython_nvim.config', function()
       for _, port in ipairs(ports) do
         Config.set_port(port)
         assert.equals(port, Config.get_port())
-      end
-    end)
-  end)
-
-  describe('get_baud / set_baud', function()
-    it('should have default baud rate as 115200', function()
-      assert.equals('115200', Config.get_baud())
-    end)
-
-    it('should set baud rate correctly', function()
-      Config.set_baud('9600')
-      assert.equals('9600', Config.get_baud())
-    end)
-
-    it('should handle various baud rates', function()
-      local rates = { '1200', '2400', '4800', '9600', '19200', '38400', '57600', '115200' }
-      for _, rate in ipairs(rates) do
-        Config.set_baud(rate)
-        assert.equals(rate, Config.get_baud())
       end
     end)
   end)
@@ -132,49 +110,13 @@ describe('micropython_nvim.config', function()
     end)
   end)
 
-  describe('get_connect_arg', function()
-    it('should return empty string for auto port', function()
-      Config.set_port('auto')
-      assert.equals('', Config.get_connect_arg())
-    end)
-
-    it('should return empty string for empty port', function()
-      Config.set_port('')
-      assert.equals('', Config.get_connect_arg())
-    end)
-
-    it('should return connect arg for specific port', function()
-      Config.set_port('/dev/ttyUSB0')
-      assert.equals('connect /dev/ttyUSB0', Config.get_connect_arg())
-    end)
-
-    it('should return connect arg for serial id', function()
-      Config.set_port('id:12345678')
-      assert.equals('connect id:12345678', Config.get_connect_arg())
-    end)
-  end)
-
   describe('state persistence', function()
-    it('should maintain state across multiple operations', function()
-      Config.set_port('/dev/ttyUSB0')
-      Config.set_baud('9600')
-
-      assert.equals('/dev/ttyUSB0', Config.get_port())
-      assert.equals('9600', Config.get_baud())
-
-      Config.set_port('/dev/ttyACM0')
-      assert.equals('/dev/ttyACM0', Config.get_port())
-      assert.equals('9600', Config.get_baud())
-    end)
-
     it('should reset state on setup', function()
       Config.set_port('/dev/ttyUSB0')
-      Config.set_baud('9600')
 
       Config.setup({})
 
       assert.equals('auto', Config.get_port())
-      assert.equals('115200', Config.get_baud())
     end)
   end)
 end)

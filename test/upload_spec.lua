@@ -129,7 +129,7 @@ describe('micropython_nvim.upload', function()
       assert.is_true(Upload.DEFAULT_IGNORE_LIST['.micropython'])
     end)
 
-    it('should contain .ampy for backwards compatibility', function()
+    it('should not upload a leftover v2 .ampy file', function()
       assert.is_true(Upload.DEFAULT_IGNORE_LIST['.ampy'])
     end)
 

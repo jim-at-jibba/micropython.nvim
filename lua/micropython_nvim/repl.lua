@@ -336,9 +336,10 @@ function M.interrupt()
   _send(CTRL_C, INTERRUPT_SETTLE_MS)
 end
 
----Stop whatever is running and run the current buffer in the REPL
-function M.run_buffer()
-  local data = M.format_send(vim.api.nvim_buf_get_lines(0, 0, -1, false))
+---Stop whatever is running and run code in the REPL
+---@param lines string[]
+function M.run_lines(lines)
+  local data = M.format_send(lines)
   if data then
     _send(CTRL_C, INTERRUPT_SETTLE_MS)
     _send(data)

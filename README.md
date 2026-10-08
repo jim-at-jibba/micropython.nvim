@@ -23,7 +23,9 @@ micropython_nvim is a plugin that aims to make it easier and more enjoyable to w
 
 See the [quickstart](#quickstart) section to get started.
 
-N.B. If you open an existing project that has a `.micropython` configuration file in the root directory, the plugin will automatically configure the port and baud rate for you.
+N.B. If you open an existing project that has a `.micropython` configuration file in the root directory, the plugin will automatically configure the port for you.
+
+Upgrading from v2? See [Migrating from v2](#migrating-from-v2).
 
 **IMPORTANT** This plugin assumes you are opening Neovim at the root of the project. Some commands will not behave in the expected way if you choose not to do this.
 
@@ -33,7 +35,7 @@ N.B. If you open an existing project that has a `.micropython` configuration fil
 - Easy multi-file project support with recursive directory upload
 - Live development with filesystem mounting
 - General file management on device
-- Easy management of port, baudrate, and other settings
+- Easy management of the device port and other settings
 - Easy project environment setup
 - Built-in REPL access
 
@@ -111,7 +113,6 @@ Options are optional; these are the defaults:
 ```lua
 require("micropython_nvim").setup({
     port = "auto",          -- "auto", a port like "/dev/ttyUSB0", or "id:<serial>"
-    baud = 115200,
     debug = false,
     upload_on_save = false, -- upload project files to the device when you save them
     ui = {
@@ -163,7 +164,7 @@ All commands live under a single `:MP` command with tab completion: type `:MP <T
 | Command | Description |
 |---------|-------------|
 | `:MP run` | Run current buffer on the micro-controller |
-| `:MP run_main` | Run main.py on the device |
+| `:MP run_main` | Run the project's `main.py` on the device (modules it imports come from the device) |
 | `:MP upload` | Upload current buffer to the same project-relative path on the device |
 | `:MP upload_all` | Upload all project files, keeping folders (unchanged files are skipped) |
 | `:MP repl` | Open or focus the REPL split |
@@ -198,25 +199,9 @@ All commands live under a single `:MP` command with tab completion: type `:MP <T
 | `:MP init` | Initialize MicroPython project (creates pyproject.toml, picks stubs for the connected board) |
 | `:MP install` | Install project dependencies with uv, and the stubs into `typings/` |
 | `:MP set_port` | Set the device port |
-| `:MP set_baud` | Set the baud rate (optional, mpremote auto-detects) |
 | `:MP set_stubs` | Switch the project's stubs (the connected board is suggested first) |
 | `:MP list_devices` | List connected MicroPython devices |
 | `:MP health` | Run `:checkhealth micropython_nvim` |
-
-### Legacy Commands
-
-The previous `:MPxxx` commands still work as aliases:
-
-| Legacy | Use instead |
-|--------|-------------|
-| `:MPRun` / `:MPRunMain` | `:MP run` / `:MP run_main` |
-| `:MPUpload` / `:MPUploadAll` | `:MP upload` / `:MP upload_all` |
-| `:MPRepl` / `:MPSync` | `:MP repl` / `:MP sync` |
-| `:MPReset` / `:MPHardReset` | `:MP reset` / `:MP hard_reset` |
-| `:MPListFiles` / `:MPListDevices` | `:MP list_files` / `:MP list_devices` |
-| `:MPEraseOne` / `:MPEraseAll` | `:MP erase` / `:MP erase_all` |
-| `:MPInit` / `:MPInstall` | `:MP init` / `:MP install` |
-| `:MPSetPort` / `:MPSetBaud` / `:MPSetStubs` | `:MP set_port` / `:MP set_baud` / `:MP set_stubs` |
 
 ### Health Check
 
@@ -406,7 +391,6 @@ The `.micropython` file stores project configuration:
 
 ```
 PORT=auto
-BAUD=115200
 ```
 
 Port options:
@@ -423,7 +407,7 @@ Key features for multi-file projects:
 - `:MP upload_all` uploads nested folders and skips unchanged files
 - `upload_on_save = true` uploads each file as you save it
 - `:MP sync` mounts local directory for live development
-- `:MP run_main` runs main.py after upload
+- `:MP run_main` runs your local main.py; upload `lib/` first so its imports resolve
 
 ### Live Development with `:MP sync`
 
@@ -460,22 +444,66 @@ require("lualine").setup({
 ```
 
 <!-- panvimdoc-ignore-start -->
+
 <img width="1080" alt="image" src="./assets/status.png">
+
 <!-- panvimdoc-ignore-end -->
 
-## Migration from ampy
+## Migrating from v2
 
-This plugin now uses mpremote instead of ampy. If you have existing projects with `.ampy` configuration files:
+v3 removes the old commands and settings. Your keymaps that call Lua functions such as
+`require("micropython_nvim").run` keep working.
 
-1. The plugin will still read `.ampy` files but will show a deprecation warning
-2. Run `:MP init` to create a new `.micropython` configuration
-3. Your `.ampy` file can be safely deleted after migration
+### Commands
 
-Key differences:
-- No need for rshell - mpremote has built-in REPL
-- Auto-detection of devices with `PORT=auto`
-- Recursive directory upload with `:MP upload_all`
-- Live development with `:MP sync` (filesystem mounting)
+`:MP <subcommand>` replaces the `:MPxxx` commands, which no longer exist:
+
+| v2 | v3 |
+|----|----|
+| `:MPRun` / `:MPRunMain` | `:MP run` / `:MP run_main` |
+| `:MPUpload` / `:MPUploadAll` | `:MP upload` / `:MP upload_all` |
+| `:MPRepl` / `:MPSync` | `:MP repl` / `:MP sync` |
+| `:MPReset` / `:MPHardReset` | `:MP reset` / `:MP hard_reset` |
+| `:MPListFiles` / `:MPListDevices` | `:MP list_files` / `:MP list_devices` |
+| `:MPEraseOne` / `:MPEraseAll` | `:MP erase` / `:MP erase_all` |
+| `:MPInit` / `:MPInstall` | `:MP init` / `:MP install` |
+| `:MPSetPort` / `:MPSetStubs` | `:MP set_port` / `:MP set_stubs` |
+| `:MPSetBaud` | Removed, see below |
+
+### Baud rate
+
+mpremote doesn't use a baud rate, so `:MPSetBaud`, `set_baud_rate()` and the `baud` option are
+gone. Remove `baud` from your `setup()` call. A `BAUD=` line left in `.micropython` is ignored and
+can be deleted. The statusline shows only the port.
+
+### `.ampy` files
+
+`.ampy` files are no longer read, so a project with only `.ampy` is no longer a MicroPython
+project: `exists()` (the statusline condition) is false and upload on save is off. Create a
+`.micropython` file with the port from `AMPY_PORT`, for example `PORT=/dev/ttyACM0` (or
+`PORT=auto`), restart Neovim to load it, then delete `.ampy`. (`:MP init` also creates
+`.micropython`, but it overwrites `main.py`, `pyproject.toml` and the other project files.)
+
+### `:MP run_main`
+
+`:MP run_main` now runs the `main.py` in your project, like `:MP run` on that file. v2 ran the copy
+on the device. Modules it imports, such as `lib/`, still come from the device, so upload them first
+(`:MP upload_all`). To run the device's `main.py`, use `:MP reset`: MicroPython runs `main.py`
+after a soft reset.
+
+### Uploads keep project paths
+
+`:MP upload` uploads a file to the same project-relative path on the device: `lib/led.py` goes to
+`:lib/led.py`. v2 uploaded every file to the device root by its name. Imports that relied on that,
+like `import led` for `lib/led.py`, need the folder (`from lib import led`) or a flat project.
+
+### Removed Lua functions
+
+- `initialise()`: use `setup()`
+- `set_baud_rate()`
+- The `.ampy` helpers in `micropython_nvim.utils` (`get_ampy_path`, `ampy_config_exists`,
+  `read_ampy_config`, `ampy_install_check`) and `get_mpremote_base()`
+- `get_baud()`, `set_baud()` and `get_connect_arg()` in `micropython_nvim.config`
 
 ## Examples
 

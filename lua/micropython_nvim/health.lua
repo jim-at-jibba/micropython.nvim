@@ -86,10 +86,6 @@ end
 local function _check_project_config()
   if Utils.config_exists() then
     vim.health.ok('Project config found: ' .. Utils.get_config_path())
-  elseif Utils.ampy_config_exists() then
-    vim.health.warn('Legacy .ampy config found: ' .. Utils.get_ampy_path(), {
-      'Run :MP init to create a .micropython config',
-    })
   else
     vim.health.info(
       'No project config in '
