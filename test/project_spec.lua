@@ -1,4 +1,5 @@
 local helpers = require('test.helpers')
+local fixtures = require('test.fixtures')
 
 describe('micropython_nvim.project', function()
   local Project
@@ -9,84 +10,171 @@ describe('micropython_nvim.project', function()
     Project = require('micropython_nvim.project')
   end)
 
-  describe('BOARDS', function()
-    it('should be a table', function()
-      assert.is_table(Project.BOARDS)
-    end)
+  describe('init', function()
+    local original_cwd
+    local installed
+    local answers
+    local jobs
+    local restore_fn
+    local restore_notify
 
-    it('should have multiple boards', function()
-      assert.is_true(#Project.BOARDS > 0)
-    end)
-
-    it('should have id for each board', function()
-      for _, board in ipairs(Project.BOARDS) do
-        assert.is_string(board.id)
-        assert.is_true(#board.id > 0)
+    ---Pick `choice` whenever stubs are chosen
+    ---@param choice string?
+    local function choose(choice)
+      local Stubs = require('micropython_nvim.stubs')
+      Stubs.choose = function(on_choice)
+        on_choice(choice)
       end
+      Stubs.install = function(requirement)
+        installed = requirement
+      end
+    end
+
+    ---@param dir string
+    ---@param name string
+    ---@return string
+    local function read(dir, name)
+      return table.concat(vim.fn.readfile(dir .. '/' .. name), '\n')
+    end
+
+    before_each(function()
+      original_cwd = vim.fn.getcwd()
+      installed = nil
+      answers = {}
+      jobs = {}
+      package.loaded['micropython_nvim.ui'] = {
+        select = function(_, opts, on_choice)
+          on_choice(answers[opts.prompt:match('^%S+')])
+        end,
+      }
+      restore_fn = helpers.mock_vim_fn({
+        jobstart = function(cmd, opts)
+          table.insert(jobs, { cmd = cmd, opts = opts })
+          return #jobs
+        end,
+        executable = function(name)
+          return name == 'uv' and 1 or 0
+        end,
+      })
+      local _
+      _, restore_notify = helpers.mock_vim_notify()
+      package.loaded['micropython_nvim.project'] = nil
+      Project = require('micropython_nvim.project')
     end)
 
-    it('should have name for each board', function()
-      for _, board in ipairs(Project.BOARDS) do
-        assert.is_string(board.name)
-        assert.is_true(#board.name > 0)
-      end
+    after_each(function()
+      restore_fn()
+      restore_notify()
+      vim.fn.chdir(original_cwd)
     end)
 
-    it('should have stub for each board', function()
-      for _, board in ipairs(Project.BOARDS) do
-        assert.is_string(board.stub)
-        assert.is_true(board.stub:match('micropython%-.*%-stubs') ~= nil)
-      end
+    it('should create the project with the chosen stubs', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        choose('micropython-rp2-rpi_pico_w-stubs==1.24.1.*')
+
+        Project.init()
+
+        assert.is_truthy(
+          read(dir, 'pyproject.toml'):find('"micropython-rp2-rpi_pico_w-stubs==1.24.1.*",', 1, true)
+        )
+        local pyright = vim.json.decode(read(dir, 'pyrightconfig.json'))
+        assert.equals('typings', pyright.stubPath)
+        assert.is_truthy(read(dir, '.gitignore'):find('typings/', 1, true))
+        assert.equals(1, vim.fn.filereadable(dir .. '/main.py'))
+      end)
     end)
 
-    it('should have rp2 board', function()
-      local found = false
-      for _, board in ipairs(Project.BOARDS) do
-        if board.id == 'rp2' then
-          found = true
-          break
-        end
-      end
-      assert.is_true(found)
+    it('should create nothing when no stubs are chosen', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        choose(nil)
+
+        Project.init()
+
+        assert.same({}, vim.fn.readdir(dir))
+      end)
     end)
 
-    it('should have esp32 board', function()
-      local found = false
-      for _, board in ipairs(Project.BOARDS) do
-        if board.id == 'esp32' then
-          found = true
-          break
-        end
-      end
-      assert.is_true(found)
+    it('should install the stubs into typings after uv sync', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        answers.Run = 'Yes'
+        choose('micropython-esp32-stubs')
+
+        Project.init()
+
+        assert.equals('uv sync', jobs[1].cmd)
+        assert.is_nil(installed)
+        jobs[1].opts.on_exit(1, 0)
+        vim.wait(100, function()
+          return installed ~= nil
+        end)
+        assert.equals('micropython-esp32-stubs', installed)
+      end)
     end)
 
-    it('should have esp8266 board', function()
-      local found = false
-      for _, board in ipairs(Project.BOARDS) do
-        if board.id == 'esp8266' then
-          found = true
-          break
-        end
-      end
-      assert.is_true(found)
+    it('should not install the stubs when uv sync fails', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        answers.Run = 'Yes'
+        choose('micropython-esp32-stubs')
+
+        Project.init()
+        jobs[1].opts.on_exit(1, 1)
+        vim.wait(50)
+
+        assert.is_nil(installed)
+      end)
     end)
   end)
 
-  describe('DEFAULT_BOARD', function()
-    it('should be rp2', function()
-      assert.equals('rp2', Project.DEFAULT_BOARD)
+  describe('install', function()
+    local original_cwd
+    local installed
+    local jobs
+    local restore_fn
+    local restore_notify
+
+    before_each(function()
+      original_cwd = vim.fn.getcwd()
+      installed = nil
+      jobs = {}
+      restore_fn = helpers.mock_vim_fn({
+        jobstart = function(cmd, opts)
+          table.insert(jobs, { cmd = cmd, opts = opts })
+          return #jobs
+        end,
+        executable = function(name)
+          return name == 'uv' and 1 or 0
+        end,
+      })
+      local _
+      _, restore_notify = helpers.mock_vim_notify()
+      require('micropython_nvim.stubs').install = function(requirement)
+        installed = requirement
+      end
     end)
 
-    it('should exist in BOARDS', function()
-      local found = false
-      for _, board in ipairs(Project.BOARDS) do
-        if board.id == Project.DEFAULT_BOARD then
-          found = true
-          break
-        end
-      end
-      assert.is_true(found)
+    after_each(function()
+      restore_fn()
+      restore_notify()
+      vim.fn.chdir(original_cwd)
+    end)
+
+    it('should sync dependencies, then install the declared stubs into typings', function()
+      helpers.with_temp_dir(function(dir)
+        vim.fn.chdir(dir)
+        vim.fn.writefile(vim.split(fixtures.pyproject_toml, '\n'), dir .. '/pyproject.toml')
+
+        Project.install()
+        jobs[1].opts.on_exit(1, 0)
+        vim.wait(100, function()
+          return installed ~= nil
+        end)
+
+        assert.equals('micropython-rp2-stubs', installed)
+      end)
     end)
   end)
 
@@ -104,8 +192,8 @@ describe('micropython_nvim.project', function()
         assert.is_true(Project.TEMPLATES.micropython_config:find('PORT') ~= nil)
       end)
 
-      it('should contain BAUD', function()
-        assert.is_true(Project.TEMPLATES.micropython_config:find('BAUD') ~= nil)
+      it('should not contain BAUD', function()
+        assert.is_nil(Project.TEMPLATES.micropython_config:find('BAUD'))
       end)
 
       it('should have auto as default port', function()
@@ -153,6 +241,12 @@ describe('micropython_nvim.project', function()
       it('should be valid JSON structure', function()
         assert.is_true(Project.TEMPLATES.pyright_config:find('{') ~= nil)
         assert.is_true(Project.TEMPLATES.pyright_config:find('}') ~= nil)
+      end)
+
+      it('should point pyright at the stubs in typings', function()
+        local config = vim.json.decode(Project.TEMPLATES.pyright_config)
+        assert.equals('typings', config.stubPath)
+        assert.is_true(vim.tbl_contains(config.exclude, 'typings'))
       end)
 
       it('should disable reportMissingModuleSource', function()

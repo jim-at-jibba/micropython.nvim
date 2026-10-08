@@ -21,19 +21,84 @@ function M.get_cwd()
   return vim.fn.getcwd()
 end
 
+---Warn and return false when no device port is configured
+---@return boolean
+function M.check_port_configured()
+  if Config.is_port_configured() then
+    return true
+  end
+  vim.notify(
+    'No port configured. Run :MP set_port first.',
+    vim.log.levels.WARN,
+    { title = 'micropython.nvim' }
+  )
+  return false
+end
+
 ---@return boolean
 function M.pyproject_exists()
   return vim.fn.filereadable(M.get_cwd() .. '/pyproject.toml') == 1
 end
 
+---@class MicroPython.JobResult
+---@field code integer Exit code, or -1 if the command could not be started
+---@field stdout string
+---@field stderr string
+
+---Join an argv into a shell-escaped command string, for a terminal
+---@param argv string[]
+---@return string
+function M.shell_join(argv)
+  return table.concat(vim.tbl_map(vim.fn.shellescape, argv), ' ')
+end
+
+---Run a command in the background without a shell, collecting its output
+---@param argv string[]
+---@param opts { cwd?: string }
+---@param on_exit fun(result: MicroPython.JobResult)
+function M.run_job(argv, opts, on_exit)
+  local stdout, stderr = {}, {}
+  local ok, job = pcall(vim.fn.jobstart, argv, {
+    cwd = opts.cwd,
+    stdout_buffered = true,
+    stderr_buffered = true,
+    on_stdout = function(_, data)
+      stdout = data
+    end,
+    on_stderr = function(_, data)
+      stderr = data
+    end,
+    on_exit = function(_, code)
+      on_exit({
+        code = code,
+        stdout = vim.trim(table.concat(stdout, '\n')),
+        stderr = vim.trim(table.concat(stderr, '\n')),
+      })
+    end,
+  })
+  if not ok or job <= 0 then
+    on_exit({ code = -1, stdout = '', stderr = argv[1] .. ' could not be started' })
+  end
+end
+
+---snacks.nvim if installed (module or the Snacks global), else nil
+---@return table|nil
+function M.get_snacks()
+  local ok, snacks = pcall(require, 'snacks')
+  if ok and snacks then
+    return snacks
+  end
+  return rawget(_G, 'Snacks')
+end
+
 ---@return boolean
-local function _is_uv_project()
+function M.is_uv_project()
   return M.uv_available() and M.pyproject_exists()
 end
 
 ---@return boolean
 function M.mpremote_install_check()
-  local is_uv = M.uv_available() and M.pyproject_exists()
+  local is_uv = M.is_uv_project()
   local cmd = is_uv and 'uv run mpremote --version 2>/dev/null' or 'mpremote --version 2>/dev/null'
 
   local ok, handle = pcall(io.popen, cmd)
@@ -62,33 +127,14 @@ function M.mpremote_install_check()
   end
 end
 
----@deprecated Use mpremote_install_check() instead
----@return boolean
-function M.ampy_install_check()
-  M.debug_print('ampy_install_check is deprecated, use mpremote_install_check')
-  return M.mpremote_install_check()
-end
-
 ---@return string
 function M.get_config_path()
   return M.get_cwd() .. '/.micropython'
 end
 
----@deprecated Use get_config_path() instead
----@return string
-function M.get_ampy_path()
-  return M.get_cwd() .. '/.ampy'
-end
-
 ---@return boolean
 function M.config_exists()
   return vim.fn.filereadable(M.get_config_path()) == 1
-end
-
----@deprecated Use config_exists() instead
----@return boolean
-function M.ampy_config_exists()
-  return vim.fn.filereadable(M.get_ampy_path()) == 1
 end
 
 ---@param content string
@@ -108,29 +154,16 @@ local function _parse_config_content(content)
   return config
 end
 
+---Load the port from the project's .micropython file
 ---@return nil
 function M.read_config()
-  local config_path = M.get_config_path()
-  local ampy_path = M.get_ampy_path()
-  local path_to_use = nil
-  local is_legacy = false
-
-  if M.config_exists() then
-    path_to_use = config_path
-  elseif M.ampy_config_exists() then
-    path_to_use = ampy_path
-    is_legacy = true
-    vim.notify(
-      '.ampy config is deprecated. Run :MPInit to migrate to .micropython',
-      vim.log.levels.WARN,
-      { title = 'micropython.nvim' }
-    )
-  else
+  local path = M.get_config_path()
+  if not M.config_exists() then
     M.debug_print('No config file found in the current directory')
     return
   end
 
-  local handle = io.open(path_to_use, 'r')
+  local handle = io.open(path, 'r')
   if not handle then
     vim.notify('Failed to open config file', vim.log.levels.ERROR, { title = 'micropython.nvim' })
     return
@@ -140,34 +173,11 @@ function M.read_config()
   handle:close()
 
   local config = _parse_config_content(content)
-
-  if is_legacy then
-    if config['AMPY_PORT'] then
-      Config.set_port(config['AMPY_PORT'])
-    end
-    if config['AMPY_BAUD'] then
-      Config.set_baud(config['AMPY_BAUD'])
-    end
-  else
-    if config['PORT'] then
-      Config.set_port(config['PORT'])
-    end
-    if config['BAUD'] then
-      Config.set_baud(config['BAUD'])
-    end
+  if config['PORT'] then
+    Config.set_port(config['PORT'])
   end
 
-  vim.notify(
-    'Config loaded from ' .. path_to_use,
-    vim.log.levels.INFO,
-    { title = 'micropython.nvim' }
-  )
-end
-
----@deprecated Use read_config() instead
----@return nil
-function M.read_ampy_config()
-  M.read_config()
+  vim.notify('Config loaded from ' .. path, vim.log.levels.INFO, { title = 'micropython.nvim' })
 end
 
 ---@param path string
@@ -237,16 +247,6 @@ function M.replace_line(file_path, needle, replacement)
   end
 
   return true
-end
-
----@return string
-function M.get_mpremote_base()
-  local base = _is_uv_project() and 'uv run mpremote ' or 'mpremote '
-  local connect_arg = Config.get_connect_arg()
-  if connect_arg ~= '' then
-    return base .. connect_arg .. ' '
-  end
-  return base
 end
 
 ---@return boolean

@@ -17,13 +17,11 @@ describe('micropython_nvim', function()
     end)
 
     it('should configure the plugin', function()
-      M.setup({ port = '/dev/ttyUSB0', baud = 9600 })
+      M.setup({ port = '/dev/ttyUSB0' })
 
-      helpers.reset_modules()
       Config = require('micropython_nvim.config')
 
       assert.equals('/dev/ttyUSB0', Config.get_port())
-      assert.equals('9600', Config.get_baud())
     end)
   end)
 
@@ -37,10 +35,9 @@ describe('micropython_nvim', function()
       assert.equals(' auto', M.statusline())
     end)
 
-    it('should return port and baud for specific port', function()
+    it('should return the port for a specific port', function()
       Config.set_port('/dev/ttyUSB0')
-      Config.set_baud('9600')
-      assert.equals(' P:/dev/ttyUSB0 BR:9600', M.statusline())
+      assert.equals(' P:/dev/ttyUSB0', M.statusline())
     end)
 
     it('should include microchip icon', function()
@@ -60,20 +57,11 @@ describe('micropython_nvim', function()
     end)
   end)
 
-  describe('initialise (deprecated)', function()
-    it('should be a function', function()
-      assert.is_function(M.initialise)
-    end)
-
-    it('should show deprecation warning', function()
-      local notifications, restore = helpers.mock_vim_notify()
-
-      M.initialise()
-
-      restore()
-      assert.is_true(#notifications > 0)
-      assert.is_true(notifications[1].msg:find('deprecated') ~= nil)
-      assert.equals(vim.log.levels.WARN, notifications[1].level)
+  describe('removed v2 API', function()
+    it('should not keep deprecated or baud functions', function()
+      for _, name in ipairs({ 'initialise', 'set_baud_rate' }) do
+        assert.is_nil(M[name], name)
+      end
     end)
   end)
 
@@ -92,10 +80,6 @@ describe('micropython_nvim', function()
 
     it('should have upload_all', function()
       assert.is_function(M.upload_all)
-    end)
-
-    it('should have set_baud_rate', function()
-      assert.is_function(M.set_baud_rate)
     end)
 
     it('should have set_port', function()

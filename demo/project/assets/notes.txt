@@ -1,0 +1,2 @@
+Notes stored on the device.
+Open this with :e mp://assets/notes.txt, edit it, and :w to write it back.

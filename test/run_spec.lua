@@ -11,128 +11,12 @@ describe('micropython_nvim.run', function()
     Run = require('micropython_nvim.run')
   end)
 
-  describe('DEFAULT_IGNORE_LIST', function()
-    it('should be a table', function()
-      assert.is_table(Run.DEFAULT_IGNORE_LIST)
-    end)
-
-    it('should contain .git', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.git'])
-    end)
-
-    it('should contain .micropython', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.micropython'])
-    end)
-
-    it('should contain .ampy for backwards compatibility', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.ampy'])
-    end)
-
-    it('should contain __pycache__', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['__pycache__'])
-    end)
-
-    it('should contain pyproject.toml', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['pyproject.toml'])
-    end)
-
-    it('should contain uv.lock', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['uv.lock'])
-    end)
-
-    it('should contain .venv', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.venv'])
-    end)
-
-    it('should contain venv', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['venv'])
-    end)
-
-    it('should contain env', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['env'])
-    end)
-
-    it('should contain requirements.txt', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['requirements.txt'])
-    end)
-
-    it('should contain .vscode', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.vscode'])
-    end)
-
-    it('should contain .gitignore', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.gitignore'])
-    end)
-
-    it('should contain project.pymakr', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['project.pymakr'])
-    end)
-
-    it('should contain .python-version', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.python-version'])
-    end)
-
-    it('should contain .micropy/', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.micropy/'])
-    end)
-
-    it('should contain micropy.json', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['micropy.json'])
-    end)
-
-    it('should contain .idea', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['.idea'])
-    end)
-
-    it('should contain README.md', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['README.md'])
-    end)
-
-    it('should contain LICENSE', function()
-      assert.is_true(Run.DEFAULT_IGNORE_LIST['LICENSE'])
-    end)
-
-    it('should not contain main.py', function()
-      assert.is_nil(Run.DEFAULT_IGNORE_LIST['main.py'])
-    end)
-
-    it('should not contain lib/', function()
-      assert.is_nil(Run.DEFAULT_IGNORE_LIST['lib/'])
-    end)
-  end)
-
   describe('run', function()
     it('should warn when port not configured', function()
       Config.set_port('')
       local notifications, restore = helpers.mock_vim_notify()
 
       Run.run()
-
-      restore()
-      assert.is_true(#notifications > 0)
-      assert.is_true(notifications[1].msg:find('No port configured') ~= nil)
-    end)
-  end)
-
-  describe('upload_current', function()
-    it('should warn when port not configured', function()
-      Config.set_port('')
-      local notifications, restore = helpers.mock_vim_notify()
-
-      Run.upload_current()
-
-      restore()
-      assert.is_true(#notifications > 0)
-      assert.is_true(notifications[1].msg:find('No port configured') ~= nil)
-    end)
-  end)
-
-  describe('upload_all', function()
-    it('should warn when port not configured', function()
-      Config.set_port('')
-      local notifications, restore = helpers.mock_vim_notify()
-
-      Run.upload_all()
 
       restore()
       assert.is_true(#notifications > 0)
@@ -228,6 +112,138 @@ describe('micropython_nvim.run', function()
       restore()
       assert.is_true(#notifications > 0)
       assert.is_true(notifications[1].msg:find('No port configured') ~= nil)
+    end)
+  end)
+
+  describe('device commands', function()
+    local calls
+    local restore_fn
+    local restore_notify
+    local restore_snacks
+    local terminal_commands
+
+    before_each(function()
+      calls = {}
+      terminal_commands = {}
+      Config.set_port('/dev/ttyUSB0')
+      restore_fn = helpers.mock_vim_fn({
+        jobstart = function(argv, opts)
+          table.insert(calls, { argv = argv, opts = opts })
+          return #calls
+        end,
+      })
+      restore_notify = select(2, helpers.mock_vim_notify())
+      restore_snacks = helpers.stub_snacks()
+      Snacks.terminal = function(cmd)
+        table.insert(terminal_commands, cmd)
+      end
+    end)
+
+    after_each(function()
+      restore_fn()
+      restore_notify()
+      restore_snacks()
+    end)
+
+    ---@param call table
+    ---@param n integer
+    ---@return string[]
+    local function tail(call, n)
+      return vim.list_slice(call.argv, #call.argv - n + 1)
+    end
+
+    it('soft_reset should run soft_reset in the background', function()
+      Run.soft_reset()
+      assert.same({ 'soft_reset' }, tail(calls[1], 1))
+    end)
+
+    it('hard_reset should run reset in the background', function()
+      Run.hard_reset()
+      assert.same({ 'reset' }, tail(calls[1], 1))
+    end)
+
+    it('erase_one should list device files without blocking', function()
+      local chosen
+      package.loaded['micropython_nvim.ui'] = {
+        select = function(items, _, cb)
+          chosen = items
+          cb(nil)
+        end,
+      }
+      Run = (function()
+        package.loaded['micropython_nvim.run'] = nil
+        return require('micropython_nvim.run')
+      end)()
+
+      Run.erase_one()
+      assert.same({ 'fs', 'ls', ':' }, tail(calls[1], 3))
+      assert.is_nil(chosen)
+
+      calls[1].opts.on_stdout(1, { 'ls :', '         139 main.py', '           0 lib/', '' })
+      calls[1].opts.on_stderr(1, { '' })
+      calls[1].opts.on_exit(1, 0)
+      assert.same({ 'main.py', 'lib/' }, chosen)
+    end)
+
+    describe('run_main', function()
+      ---@param fn fun(dir: string)
+      local function in_project(fn)
+        helpers.with_temp_dir(function(dir)
+          local cwd = vim.fn.getcwd()
+          vim.cmd.cd(dir)
+          local ok, err = pcall(fn, vim.fn.getcwd())
+          vim.cmd.cd(cwd)
+          assert(ok, err)
+        end)
+      end
+
+      it("should run the project's local main.py", function()
+        in_project(function(dir)
+          vim.fn.writefile({ 'print("hi")' }, dir .. '/main.py')
+          Run.run_main()
+          assert.equals(1, #terminal_commands)
+          local expected = "'run' " .. vim.fn.shellescape(dir .. '/main.py')
+          assert.is_truthy(terminal_commands[1]:find(expected, 1, true))
+          assert.is_falsy(terminal_commands[1]:find('exec', 1, true))
+          assert.is_truthy(terminal_commands[1]:find('2>&1', 1, true))
+        end)
+      end)
+
+      it('should warn when the project has no main.py', function()
+        in_project(function()
+          local notifications, restore = helpers.mock_vim_notify()
+          Run.run_main()
+          restore()
+          assert.equals(0, #terminal_commands)
+          assert.equals(vim.log.levels.WARN, notifications[1].level)
+          assert.is_truthy(notifications[1].msg:find('main.py', 1, true))
+        end)
+      end)
+
+      it('should run main.py through the REPL when it holds the port', function()
+        local ran
+        package.loaded['micropython_nvim.repl'] = {
+          is_running = function()
+            return true
+          end,
+          run_lines = function(lines)
+            ran = lines
+          end,
+        }
+        in_project(function(dir)
+          vim.fn.writefile({ 'print("hi")' }, dir .. '/main.py')
+          Run.run_main()
+        end)
+        assert.same({ 'print("hi")' }, ran)
+        assert.equals(0, #terminal_commands)
+      end)
+    end)
+
+    it('run should escape the file path for the terminal', function()
+      vim.api.nvim_buf_set_name(0, "/tmp/it's here.py")
+      Run.run()
+      local path = vim.api.nvim_buf_get_name(0)
+      assert.is_truthy(terminal_commands[1]:find(vim.fn.shellescape(path), 1, true))
     end)
   end)
 end)

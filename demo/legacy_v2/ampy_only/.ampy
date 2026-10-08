@@ -1,0 +1,3 @@
+# v2 ampy config, no longer read in v3
+AMPY_PORT=/dev/does-not-exist
+AMPY_BAUD=9600

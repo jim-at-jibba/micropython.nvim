@@ -1,14 +1,13 @@
 local M = {}
 
 M.micropython_config = [[
-# MicroPython project configuration
+# MicroPython v2 project configuration
 PORT=/dev/ttyUSB0
 BAUD=115200
 ]]
 
 M.micropython_config_auto = [[
 PORT=auto
-BAUD=115200
 ]]
 
 M.ampy_config = [[
@@ -21,13 +20,11 @@ M.micropython_config_with_comments = [[
 # This is a comment
 PORT=/dev/ttyUSB0
 # Another comment
-BAUD=9600
 # Final comment
 ]]
 
 M.micropython_config_whitespace = [[
   PORT  =  /dev/ttyUSB0  
-BAUD=115200
 ]]
 
 M.pyproject_toml = [[

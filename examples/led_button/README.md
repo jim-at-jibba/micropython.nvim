@@ -26,28 +26,28 @@ led_button/
 ### Quick Start
 
 1. Open Neovim in this directory
-2. Run `:MPSetPort` to select your device
-3. Run `:MPUploadAll` to upload all files
-4. Run `:MPRunMain` to execute
+2. Run `:MP set_port` to select your device
+3. Run `:MP upload_all` to upload all files, including `lib/`
+4. Run `:MP run_main` to run `main.py`
 
-### Live Development with MPSync
+### Live Development with `:MP sync`
 
 For rapid development, use the mount feature:
 
-1. Run `:MPSync` to mount this directory on the device
+1. Run `:MP sync` to mount this directory on the device
 2. The local `lib/` directory becomes available as `/remote/lib/` on device
 3. Edit files locally - changes are immediately available
-4. Use `:MPRepl` and run `import main` to test
+4. Use `:MP repl` and run `import main` to test
 
 ### Commands Used
 
 | Command | Description |
 |---------|-------------|
-| `:MPUploadAll` | Upload all project files to device |
-| `:MPRunMain` | Execute main.py on device |
-| `:MPSync` | Mount local directory for live development |
-| `:MPRepl` | Open interactive REPL |
-| `:MPListFiles` | Show files on device |
+| `:MP upload_all` | Upload all project files to device |
+| `:MP run_main` | Run the local main.py on the device |
+| `:MP sync` | Mount local directory for live development |
+| `:MP repl` | Open interactive REPL |
+| `:MP list_files` | Show files on device |
 
 ## Customization
 

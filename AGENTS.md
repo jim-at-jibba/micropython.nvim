@@ -3,7 +3,7 @@
 ## Commands
 - Format: `stylua .`
 - Format check: `stylua --check .`
-- Lint: `luarocks install luacheck && luacheck .`
+- Lint: `luacheck .`
 - Test all: `vusted ./test`
 - Test single: `vusted ./test/plugin_spec.lua`
 
@@ -14,19 +14,32 @@
 ```
 lua/
   micropython_nvim/    # Internal modules
+    commands.lua       # :MP subcommand registry, dispatch and completion
     config.lua         # Configuration defaults and state
-    run.lua            # Run/upload code to device
-    setup.lua          # Configure port, baud, stubs
-    repl.lua           # REPL access
+    health.lua         # :checkhealth micropython_nvim
+    mpremote.lua       # Shared mpremote runner (argv, async jobs, terminal commands)
+    run.lua            # Run code, reset, erase and list files on the device
+    device.lua         # Board detection, device info (firmware, board, storage, clock) and mip installs
+    upload.lua         # Upload files (keeping project paths) and upload on save
+    files.lua          # Device file browser and mp://<path> buffers
+    setup.lua          # Configure port, stubs
+    stubs.lua          # Stub suggestions (PyPI-checked), typings install, pyright config
+    flash.lua          # Firmware flashing with mpflash: version picker, serial port resolution
+    repl.lua           # Persistent REPL split: send line/selection/buffer, interrupt
+    terminal.lua       # Terminal: snacks.nvim if installed, else built-in float
+    ui.lua             # Picker: snacks.nvim if installed, else vim.ui.select
     project.lua        # Project initialization
     utils.lua          # File I/O, config, helpers
   micropython_nvim.lua # Main entry point, public API
 plugin/
-  micropython_nvim.lua # Vim commands, lazy-loads plugin
+  micropython_nvim.lua # :MP command and mp:// buffer autocmds
 test/
-  plugin_spec.lua      # vusted test suite
+  *_spec.lua           # vusted test suites, one per module
 doc/
   micropython.nvim.txt # Help documentation
+demo/
+  MANUAL_TESTS.md      # Manual test suite for real devices (Pico, Badger 2350)
+  project/             # Demo project the manual tests run against
 ```
 
 ### Module Pattern
@@ -55,8 +68,8 @@ return M
 |------|------------|---------|
 | Functions | snake_case | `get_port`, `upload_current` |
 | Private funcs | underscore prefix | `local function _helper()` |
-| Variables | snake_case | `ampy_port`, `file_path` |
-| Constants | UPPER_CASE | `M.BAUD_RATES`, `M.DEFAULT_IGNORE_LIST` |
+| Variables | snake_case | `device_port`, `file_path` |
+| Constants | UPPER_CASE | `M.MAX_VERSIONS`, `M.DEFAULT_IGNORE_LIST` |
 | Module table | `M` | `local M = {}` |
 | Requires | PascalCase | `local Config = require(...)` |
 
@@ -67,7 +80,6 @@ Required on all public functions and classes:
 ```lua
 ---@class MicroPython.Config
 ---@field port? string Device port
----@field baud? number Baud rate
 ---@field debug? boolean Enable debug logging
 
 ---@param opts? MicroPython.Config
@@ -99,7 +111,7 @@ end)
 ### Code Style
 - Formatter: stylua (100 char line width, 2 space indent, AutoPreferSingle quotes)
 - Use `local M = {}` module pattern, return `M` at end
-- Use `vim.ui.select` for user interaction
+- Use `require('micropython_nvim.ui').select` for user interaction (snacks picker or `vim.ui.select`)
 - Use `vim.notify` with `vim.log.levels` and `{ title = "micropython.nvim" }`
 - Template strings using `[[...]]` for multi-line content
 
@@ -110,8 +122,7 @@ end)
 ```lua
 -- lua/micropython_nvim/config.lua
 local defaults = {
-  port = "/dev/ttyUSB0",
-  baud = 115200,
+  port = "auto",
   debug = false,
 }
 
@@ -126,7 +137,6 @@ end
 ```lua
 require("micropython_nvim").setup({
   port = "/dev/ttyACM0",
-  baud = 115200,
   debug = true,
 })
 ```
@@ -161,7 +171,7 @@ local M = {}
 
 function M.setup(opts)
   require("micropython_nvim.config").setup(opts)
-  require("micropython_nvim.utils").read_ampy_config()
+  require("micropython_nvim.utils").read_config()
 end
 
 function M.run()
@@ -181,27 +191,24 @@ function M.run()
 end
 ```
 
-### 3. Commands in Plugin File
+### 3. Subcommands in One Registry
 
 ```lua
--- plugin/micropython_nvim.lua
-vim.api.nvim_create_user_command("MPRun", function()
-  require("micropython_nvim").run()
-end, { desc = "Run current buffer on MicroPython device" })
+-- lua/micropython_nvim/commands.lua: every :MP subcommand lives in M.subcommands
+run = { desc = 'Run current buffer on the device', impl = _facade('run') },
 ```
 
 ### 4. Async Operations
 
 ```lua
-local function _async_job(command, command_name)
-  vim.fn.jobstart(command, {
-    on_exit = function(_, exit_status, _)
-      if exit_status == 0 then
-        vim.notify(command_name .. " completed", vim.log.levels.INFO, { title = "micropython.nvim" })
-      end
-    end,
-  })
-end
+-- Background: argv-based, no shell; notifies start/success/failure (with stderr) when named
+Mpremote.run({ 'cp', file_path, ':' .. filename }, { name = 'Upload ' .. filename })
+
+-- With a result callback
+Mpremote.run({ 'fs', 'ls', ':' }, {
+  on_exit = function(result) -- { code, stdout, stderr }
+  end,
+})
 ```
 
 ## Common Tasks
@@ -211,8 +218,8 @@ end
 1. Create `lua/micropython_nvim/feature.lua`
 2. Add type annotations with `---@`
 3. Export from `lua/micropython_nvim.lua` if public
-4. Add command in `plugin/micropython_nvim.lua`
-5. Add tests in `test/plugin_spec.lua`
+4. Add a subcommand to `M.subcommands` in `commands.lua`
+5. Add tests in `test/<feature>_spec.lua`
 
 ### Add configuration option
 
@@ -220,27 +227,47 @@ end
 2. Add `---@field` annotation to `MicroPython.Config`
 3. Document in README
 
-### Add user command
+### Add a :MP subcommand
 
 ```lua
--- plugin/micropython_nvim.lua
-vim.api.nvim_create_user_command("MPNewCommand", function(opts)
-  require("micropython_nvim").feature(opts.args)
-end, { nargs = "?", desc = "Description" })
+-- lua/micropython_nvim/commands.lua, in M.subcommands
+feature = {
+  desc = 'Description',
+  impl = function(args)
+    require('micropython_nvim').feature(args)
+  end,
+  complete = function(arglead) return {} end, -- optional argument completion
+},
 ```
+
+`:MP` is the only user command; do not add `:MPxxx` commands.
 
 ## Conventions
 - Config state: Use `config.lua` module instead of `_G` table
-- Command assembly: Use `string.format()` for ampy/rshell commands
-- Terminal usage: Use `Snacks.terminal(command)` for floating terminals
-- Async operations: Use `vim.fn.jobstart()` with `on_exit` callback
+- Command assembly: Build mpremote argv with `Mpremote.argv()`; use `Mpremote.command()` for shell-escaped terminal strings
+- Terminal usage: Use `Terminal.open(command)` (never call `Snacks.terminal` directly); `Terminal.start` for a terminal in a window you manage, like the REPL split
+- Async operations: Use `Mpremote.run(args, { name, on_exit })`
 - File operations: Use `vim.fn` functions for file I/O in user-facing code, `io.*` for internals
 - Project root: All operations assume Neovim opened at project root
-- Config sync: Update both config module state and `.ampy` file
+- Config sync: Update both config module state and `.micropython` file
 
 ## Safety
-- Always validate user input in `vim.ui.select` callbacks (check for `nil`)
+- Always validate user input in `UI.select` callbacks (check for `nil`)
 - Use `2>&1` in terminal commands to capture errors
 - Verify file readability with `vim.fn.filereadable()` before operations
 - Handle `nil` returns from file operations gracefully
 - Use `pcall` for external command execution with graceful degradation
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in GitHub Issues on jim-at-jibba/micropython.nvim via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.

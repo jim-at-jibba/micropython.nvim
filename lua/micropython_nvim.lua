@@ -4,6 +4,7 @@ local M = {}
 function M.setup(opts)
   require('micropython_nvim.config').setup(opts)
   require('micropython_nvim.utils').read_config()
+  require('micropython_nvim.upload').setup_upload_on_save()
 end
 
 function M.run()
@@ -14,17 +15,35 @@ function M.repl()
   require('micropython_nvim.repl').open()
 end
 
+function M.repl_send_line()
+  require('micropython_nvim.repl').send_line()
+end
+
+---@param line1 integer
+---@param line2 integer
+function M.repl_send_range(line1, line2)
+  require('micropython_nvim.repl').send_range(line1, line2)
+end
+
+function M.repl_send_selection()
+  require('micropython_nvim.repl').send_selection()
+end
+
+function M.repl_send_buffer()
+  require('micropython_nvim.repl').send_buffer()
+end
+
+function M.repl_interrupt()
+  require('micropython_nvim.repl').interrupt()
+end
+
 function M.upload_current()
-  require('micropython_nvim.run').upload_current()
+  require('micropython_nvim.upload').upload_current()
 end
 
 ---@param opts? MicroPython.UploadAllOptions
 function M.upload_all(opts)
-  require('micropython_nvim.run').upload_all(opts)
-end
-
-function M.set_baud_rate()
-  require('micropython_nvim.setup').set_baud_rate()
+  require('micropython_nvim.upload').upload_all(opts)
 end
 
 function M.set_port()
@@ -71,6 +90,24 @@ function M.list_files()
   require('micropython_nvim.run').list_files()
 end
 
+function M.files()
+  require('micropython_nvim.files').open()
+end
+
+function M.info()
+  require('micropython_nvim.device').info()
+end
+
+---@param args string[] package, then an optional target directory on the device
+function M.mip(args)
+  require('micropython_nvim.device').mip(args)
+end
+
+---@param args string[] an optional firmware version
+function M.flash(args)
+  require('micropython_nvim.flash').flash(args)
+end
+
 function M.run_main()
   require('micropython_nvim.run').run_main()
 end
@@ -82,23 +119,12 @@ function M.statusline()
   if port == 'auto' then
     return ' auto'
   end
-  return ' P:' .. port .. ' BR:' .. Config.get_baud()
+  return ' P:' .. port
 end
 
 ---@return boolean
 function M.exists()
-  local Utils = require('micropython_nvim.utils')
-  return Utils.config_exists() or Utils.ampy_config_exists()
-end
-
----@deprecated Use setup() instead
-function M.initialise()
-  vim.notify(
-    'initialise() is deprecated, use setup() instead',
-    vim.log.levels.WARN,
-    { title = 'micropython.nvim' }
-  )
-  M.setup()
+  return require('micropython_nvim.utils').config_exists()
 end
 
 return M

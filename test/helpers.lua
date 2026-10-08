@@ -9,6 +9,15 @@ function M.reset_modules()
   package.loaded['micropython_nvim.project'] = nil
   package.loaded['micropython_nvim.repl'] = nil
   package.loaded['micropython_nvim.ui'] = nil
+  package.loaded['micropython_nvim.mpremote'] = nil
+  package.loaded['micropython_nvim.commands'] = nil
+  package.loaded['micropython_nvim.terminal'] = nil
+  package.loaded['micropython_nvim.health'] = nil
+  package.loaded['micropython_nvim.upload'] = nil
+  package.loaded['micropython_nvim.files'] = nil
+  package.loaded['micropython_nvim.device'] = nil
+  package.loaded['micropython_nvim.stubs'] = nil
+  package.loaded['micropython_nvim.flash'] = nil
 end
 
 function M.mock_vim_fn(overrides)
@@ -57,6 +66,24 @@ function M.stub_snacks(picker_callback)
     else
       rawset(_G, 'Snacks', nil)
     end
+  end
+end
+
+---Make snacks.nvim look uninstalled: no global and require('snacks') fails
+---@return function restore
+function M.hide_snacks()
+  local original_global = rawget(_G, 'Snacks')
+  local original_loaded = package.loaded['snacks']
+  local original_preload = package.preload['snacks']
+  rawset(_G, 'Snacks', nil)
+  package.loaded['snacks'] = nil
+  package.preload['snacks'] = function()
+    error('snacks.nvim is not installed')
+  end
+  return function()
+    rawset(_G, 'Snacks', original_global)
+    package.loaded['snacks'] = original_loaded
+    package.preload['snacks'] = original_preload
   end
 end
 

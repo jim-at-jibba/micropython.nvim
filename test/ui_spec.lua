@@ -2,7 +2,6 @@ local helpers = require('test.helpers')
 
 describe('micropython_nvim.ui', function()
   local UI
-  local original_require
 
   before_each(function()
     helpers.reset_modules()

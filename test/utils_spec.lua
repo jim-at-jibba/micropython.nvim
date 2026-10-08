@@ -24,6 +24,27 @@ describe('micropython_nvim.utils', function()
     end)
   end)
 
+  describe('check_port_configured', function()
+    it('should return true without notifying when a port is set', function()
+      require('micropython_nvim.config').set_port('auto')
+      local notifications, restore = helpers.mock_vim_notify()
+      local ok = Utils.check_port_configured()
+      restore()
+      assert.is_true(ok)
+      assert.equals(0, #notifications)
+    end)
+
+    it('should warn with the :MP set_port hint when no port is set', function()
+      require('micropython_nvim.config').set_port('')
+      local notifications, restore = helpers.mock_vim_notify()
+      local ok = Utils.check_port_configured()
+      restore()
+      assert.is_false(ok)
+      assert.equals(vim.log.levels.WARN, notifications[1].level)
+      assert.is_truthy(notifications[1].msg:find(':MP set_port', 1, true))
+    end)
+  end)
+
   describe('get_config_path', function()
     it('should return path ending with .micropython', function()
       local path = Utils.get_config_path()
@@ -37,19 +58,6 @@ describe('micropython_nvim.utils', function()
     end)
   end)
 
-  describe('get_ampy_path', function()
-    it('should return path ending with .ampy', function()
-      local path = Utils.get_ampy_path()
-      assert.is_true(path:match('%.ampy$') ~= nil)
-    end)
-
-    it('should include cwd in path', function()
-      local path = Utils.get_ampy_path()
-      local cwd = Utils.get_cwd()
-      assert.is_true(path:find(cwd, 1, true) == 1)
-    end)
-  end)
-
   describe('PRESS_ENTER_PROMPT', function()
     it('should be defined', function()
       assert.is_string(Utils.PRESS_ENTER_PROMPT)
@@ -57,32 +65,6 @@ describe('micropython_nvim.utils', function()
 
     it('should contain printf command', function()
       assert.is_true(Utils.PRESS_ENTER_PROMPT:find('printf') ~= nil)
-    end)
-  end)
-
-  describe('get_mpremote_base', function()
-    it('should return mpremote for auto port', function()
-      Config.set_port('auto')
-      local base = Utils.get_mpremote_base()
-      assert.equals('mpremote ', base)
-    end)
-
-    it('should return mpremote for empty port', function()
-      Config.set_port('')
-      local base = Utils.get_mpremote_base()
-      assert.equals('mpremote ', base)
-    end)
-
-    it('should include connect arg for specific port', function()
-      Config.set_port('/dev/ttyUSB0')
-      local base = Utils.get_mpremote_base()
-      assert.equals('mpremote connect /dev/ttyUSB0 ', base)
-    end)
-
-    it('should include connect arg for serial id', function()
-      Config.set_port('id:12345678')
-      local base = Utils.get_mpremote_base()
-      assert.equals('mpremote connect id:12345678 ', base)
     end)
   end)
 
@@ -112,12 +94,12 @@ describe('micropython_nvim.utils', function()
     it('should not print when debug is disabled', function()
       Config.setup({ debug = false })
       local printed = false
-      local original_print = print
-      print = function()
+      local original_print = _G.print
+      _G.print = function()
         printed = true
       end
       Utils.debug_print('test message')
-      print = original_print
+      _G.print = original_print
       assert.is_false(printed)
     end)
 
@@ -129,12 +111,12 @@ describe('micropython_nvim.utils', function()
       Utils = require('micropython_nvim.utils')
 
       local printed = false
-      local original_print = print
-      print = function()
+      local original_print = _G.print
+      _G.print = function()
         printed = true
       end
       Utils.debug_print('test message')
-      print = original_print
+      _G.print = original_print
       assert.is_true(printed)
     end)
   end)
@@ -206,7 +188,7 @@ describe('micropython_nvim.utils', function()
     end)
 
     it('should return false for non-existent file', function()
-      local notifications, restore = helpers.mock_vim_notify()
+      local _, restore = helpers.mock_vim_notify()
       local result = Utils.replace_line('/nonexistent/file.txt', 'needle', 'replacement')
       restore()
 
@@ -214,7 +196,7 @@ describe('micropython_nvim.utils', function()
     end)
   end)
 
-  describe('config_exists / ampy_config_exists', function()
+  describe('config_exists', function()
     it('should return false when no config exists', function()
       local restore = helpers.mock_vim_fn({
         filereadable = function()
@@ -226,9 +208,55 @@ describe('micropython_nvim.utils', function()
       Utils = require('micropython_nvim.utils')
 
       assert.is_false(Utils.config_exists())
-      assert.is_false(Utils.ampy_config_exists())
 
       restore()
+    end)
+  end)
+
+  describe('read_config', function()
+    local original_cwd
+
+    before_each(function()
+      original_cwd = vim.fn.getcwd()
+    end)
+
+    after_each(function()
+      vim.cmd.cd(original_cwd)
+    end)
+
+    it('should load the port from .micropython, ignoring a v2 BAUD line', function()
+      helpers.with_temp_dir(function(dir)
+        vim.cmd.cd(dir)
+        vim.fn.writefile(vim.split(fixtures.micropython_config, '\n'), dir .. '/.micropython')
+        local _, restore = helpers.mock_vim_notify()
+        Utils.read_config()
+        restore()
+        assert.equals('/dev/ttyUSB0', Config.get_port())
+      end)
+    end)
+
+    it('should ignore a v2 .ampy config', function()
+      helpers.with_temp_dir(function(dir)
+        vim.cmd.cd(dir)
+        vim.fn.writefile(vim.split(fixtures.ampy_config, '\n'), dir .. '/.ampy')
+        local notifications, restore = helpers.mock_vim_notify()
+        Utils.read_config()
+        restore()
+        assert.equals('auto', Config.get_port())
+        assert.equals(0, #notifications)
+      end)
+    end)
+
+    it('should not keep the v2 .ampy and deprecated helpers', function()
+      for _, name in ipairs({
+        'ampy_install_check',
+        'get_ampy_path',
+        'ampy_config_exists',
+        'read_ampy_config',
+        'get_mpremote_base',
+      }) do
+        assert.is_nil(Utils[name], name)
+      end
     end)
   end)
 
