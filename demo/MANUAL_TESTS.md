@@ -439,17 +439,13 @@ terminal.
 - [ ] Pico  - [ ] Badger
 - Notes:
 
-### U2a. Editor files stay off the device (known issue)
+### U2a. Editor files stay off the device
 
 1. Run `:MP install` in `demo/project`, which puts the stubs in `typings/`.
 2. Run `:MP upload_all scratch`, then `:MP list_files`.
 
-**Expected:** `typings/` and `pyrightconfig.json` are not uploaded.
-
-**Known issue when this suite was written:** neither is on the default ignore list, so both are
-uploaded. `typings/` holds hundreds of `.pyi` files and can fill the device. Expect this test to
-fail until that's fixed. Until then, add `typings pyrightconfig.json` to every `:MP upload_all`.
-If they were uploaded, remove them with `:MP erase` (pick `typings/`, then
+**Expected:** `typings/` and `pyrightconfig.json` are not uploaded. Both are on the default
+ignore list. If an older build uploaded them, remove them with `:MP erase` (pick `typings/`, then
 `pyrightconfig.json`).
 
 - [ ] Pico
