@@ -340,7 +340,7 @@ A name is ignored at any depth, so `__pycache__` skips every `__pycache__` folde
   '.git', 'pyproject.toml', 'uv.lock', '.ampy', '.micropython', '.vscode',
   '.gitignore', 'project.pymakr', 'env', 'venv', '.venv', '__pycache__',
   '.python-version', '.micropy/', 'micropy.json', '.idea',
-  'README.md', 'LICENSE', 'requirements.txt'
+  'README.md', 'LICENSE', 'requirements.txt', 'typings', 'pyrightconfig.json'
 }
 ```
 
@@ -377,7 +377,7 @@ else, choose from the full list below the suggestions.
 The chosen stubs are declared in `pyproject.toml` (or `requirements.txt`) and installed into
 `typings/`. `pyrightconfig.json` sets `"stubPath": "typings"`. pyright looks there before its
 own CPython standard library, so MicroPython's `time.sleep_ms` and friends resolve too.
-`typings/` is git-ignored and excluded from checking.
+`typings/` is git-ignored, excluded from checking and never uploaded to the device.
 
 `:MP set_stubs` updates an existing project the same way. It adds `stubPath` to an existing
 `pyrightconfig.json`, and creates one unless `pyproject.toml` has a `[tool.pyright]` section.

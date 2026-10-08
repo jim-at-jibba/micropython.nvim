@@ -25,6 +25,9 @@ M.DEFAULT_IGNORE_LIST = {
   ['.idea'] = true,
   ['README.md'] = true,
   ['LICENSE'] = true,
+  -- Editor stubs and config written by :MP install
+  ['typings'] = true,
+  ['pyrightconfig.json'] = true,
 }
 
 local AUGROUP = 'micropython_nvim_upload_on_save'

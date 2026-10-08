@@ -197,6 +197,14 @@ describe('micropython_nvim.upload', function()
       assert.is_true(Upload.DEFAULT_IGNORE_LIST['LICENSE'])
     end)
 
+    it('should contain typings', function()
+      assert.is_true(Upload.DEFAULT_IGNORE_LIST['typings'])
+    end)
+
+    it('should contain pyrightconfig.json', function()
+      assert.is_true(Upload.DEFAULT_IGNORE_LIST['pyrightconfig.json'])
+    end)
+
     it('should not contain main.py', function()
       assert.is_nil(Upload.DEFAULT_IGNORE_LIST['main.py'])
     end)
@@ -286,6 +294,12 @@ describe('micropython_nvim.upload', function()
 
     it('should skip default ignored names at any depth', function()
       make_files({ 'main.py', '.micropython', 'lib/__pycache__/a.mpy', '.venv/lib/x.py' })
+      Upload.upload_all()
+      assert.same({ 'main.py' }, vim.tbl_keys(copies(mpremote_args(calls[1]))))
+    end)
+
+    it('should skip the stubs and pyright config that :MP install writes', function()
+      make_files({ 'main.py', 'pyrightconfig.json', 'typings/machine/__init__.pyi' })
       Upload.upload_all()
       assert.same({ 'main.py' }, vim.tbl_keys(copies(mpremote_args(calls[1]))))
     end)
