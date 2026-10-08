@@ -23,7 +23,7 @@ end.
 - [S. Upload on save](#s-upload-on-save)
 - [B. File browser and mp:// buffers](#b-file-browser-and-mp-buffers)
 - [L. REPL](#l-repl)
-- [Y. Sync (mount)](#y-sync-mount)
+- [Y. Mount](#y-mount)
 - [X. Reset](#x-reset)
 - [M. Packages (mip)](#m-packages-mip)
 - [T. Project init and stubs](#t-project-init-and-stubs)
@@ -167,9 +167,9 @@ Note your board (Pico, Pico W, Pico 2, Pico 2 W) here: ____________
 **Expected:**
 
 1. Completion lists the subcommands: `erase`, `erase_all`, `files`, `flash`, `hard_reset`,
-   `health`, `info`, `init`, `install`, `interrupt`, `list_devices`, `list_files`, `mip`, `repl`,
-   `reset`, `run`, `run_main`, `send`, `send_buffer`, `set_port`, `set_stubs`, `sync`, `upload`,
-   `upload_all`. There is no `set_baud`.
+   `health`, `info`, `init`, `install`, `interrupt`, `list_devices`, `list_files`, `mip`, `mount`,
+   `repl`, `reset`, `run`, `run_main`, `send`, `send_buffer`, `set_port`, `set_stubs`, `upload`,
+   `upload_all`. There is no `set_baud`, and no `sync` (its deprecated old name).
 2. `E492: Not an editor command: MPRun`.
 
 - [ ] Pico
@@ -724,15 +724,15 @@ Close the REPL before continuing.
 
 ---
 
-## Y. Sync (mount)
+## Y. Mount
 
 ### Y1. Mount and import
 
-1. Run `:MP sync`.
-2. At the prompt, type `from lib.greeting import greeting; greeting("sync")`.
+1. Run `:MP mount`.
+2. At the prompt, type `from lib.greeting import greeting; greeting("mount")`.
 
 **Expected:** a terminal showing the local directory mounted at `/remote` and a REPL. The command
-prints `'Hello, sync!'`.
+prints `'Hello, mount!'`.
 
 - [ ] Pico  - [ ] Badger
 - Notes:
@@ -740,17 +740,31 @@ prints `'Hello, sync!'`.
 ### Y2. Local edits without uploading
 
 1. In another window change `MESSAGE` to `"Mounted"` and save. Leave upload on save off.
-2. In the sync terminal press `Ctrl-D` (soft reset; the mount is kept), then repeat the Y1 import.
+2. In the mount terminal press `Ctrl-D` (soft reset; the mount is kept), then repeat the Y1 import.
 3. Run `import main`, then press `Ctrl-C`.
 
 **Expected:**
 
-- Step 2: `'Mounted, sync!'`.
+- Step 2: `'Mounted, mount!'`.
 - Step 3: the demo app starts from the mounted files.
 
 Set `MESSAGE` back to `"Hello"`. Exit with `Ctrl-]` (or `Ctrl-x`).
 
 - [ ] Pico  - [ ] Badger
+- Notes:
+
+### Y3. Deprecated `sync`
+
+1. Run `:MP sync`, then exit with `Ctrl-]` (or `Ctrl-x`).
+2. Run `:MP sync` again, then exit.
+
+**Expected:**
+
+- Step 1: a warning that `:MP sync` is deprecated in favour of `:MP mount`, then the same mount
+  terminal as Y1.
+- Step 2: the mount terminal again, with no second warning.
+
+- [ ] Pico
 - Notes:
 
 ---

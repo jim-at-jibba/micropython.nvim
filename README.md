@@ -43,7 +43,7 @@ Upgrading from v2? See [Migrating from v2](#migrating-from-v2).
 
 - **Run** local python files on your micro-controller
 - **Upload** local python files to your micro-controller (including recursive directory upload)
-- **Sync** mount local directory for live development without uploading
+- **Mount** your local directory for live development without uploading
 - **REPL** in a persistent split: send the current line, a selection or the whole buffer, and stop running code
 - **File browser** - browse, edit, delete, download and create files and folders on the device
 - **Device management** - list connected devices, reset, show device info and set its clock
@@ -176,7 +176,7 @@ All commands live under a single `:MP` command with tab completion: type `:MP <T
 
 | Command | Description |
 |---------|-------------|
-| `:MP sync` | Mount local directory on device for live development |
+| `:MP mount` | Mount local directory on device for live development |
 | `:MP reset` | Soft reset the device |
 | `:MP hard_reset` | Hard reset the device |
 | `:MP info` | Show firmware, board, storage and clock; press `s` to set the device clock |
@@ -406,23 +406,27 @@ Key features for multi-file projects:
 
 - `:MP upload_all` uploads nested folders and skips unchanged files
 - `upload_on_save = true` uploads each file as you save it
-- `:MP sync` mounts local directory for live development
+- `:MP mount` mounts local directory for live development
 - `:MP run_main` runs your local main.py; upload `lib/` first so its imports resolve
 
-### Live Development with `:MP sync`
+### Live Development with `:MP mount`
 
-The `:MP sync` command mounts your local project directory on the device as `/remote`. This allows you to:
+The `:MP mount` command mounts your local project directory on the device as `/remote`. This allows you to:
 
 1. Edit files locally
 2. Changes are immediately available on device (no upload needed)
 3. Import modules from your local directory
 4. Rapidly iterate without waiting for uploads
 
+Nothing is copied to the device: the mount lasts until you close its terminal.
+
 ```
-:MP sync        " Mount current directory
+:MP mount       " Mount current directory
 :MP repl        " Open REPL
 >>> import main  " Run your code
 ```
+
+`:MP sync`, the old name for `:MP mount`, still works but is deprecated and will be removed.
 
 ## Statusline
 
@@ -462,7 +466,7 @@ v3 removes the old commands and settings. Your keymaps that call Lua functions s
 |----|----|
 | `:MPRun` / `:MPRunMain` | `:MP run` / `:MP run_main` |
 | `:MPUpload` / `:MPUploadAll` | `:MP upload` / `:MP upload_all` |
-| `:MPRepl` / `:MPSync` | `:MP repl` / `:MP sync` |
+| `:MPRepl` / `:MPSync` | `:MP repl` / `:MP mount` |
 | `:MPReset` / `:MPHardReset` | `:MP reset` / `:MP hard_reset` |
 | `:MPListFiles` / `:MPListDevices` | `:MP list_files` / `:MP list_devices` |
 | `:MPEraseOne` / `:MPEraseAll` | `:MP erase` / `:MP erase_all` |

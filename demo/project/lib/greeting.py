@@ -1,4 +1,4 @@
-"""Greeting text. Edit MESSAGE to check that uploads, mp:// buffers and :MP sync pick it up."""
+"""Greeting text. Edit MESSAGE to check that uploads, mp:// buffers and :MP mount pick it up."""
 
 MESSAGE = "Hello"
 

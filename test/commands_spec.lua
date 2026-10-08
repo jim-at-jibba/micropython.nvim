@@ -56,6 +56,43 @@ describe('micropython_nvim.commands', function()
       assert.same({ { args = 'test.py docs' } }, calls[1])
     end)
 
+    it('should mount the project with mount', function()
+      local calls, restore = spy_facade('mount')
+      Commands.dispatch({ 'mount' })
+      restore()
+      assert.equals(1, #calls)
+    end)
+
+    it('should still mount with the deprecated sync, warning once per session', function()
+      local calls, restore_facade = spy_facade('mount')
+      local notifications, restore_notify = helpers.mock_vim_notify()
+
+      Commands.dispatch({ 'sync' })
+      Commands.dispatch({ 'sync' })
+
+      restore_notify()
+      restore_facade()
+      assert.equals(2, #calls)
+      assert.equals(1, #notifications)
+      assert.equals(vim.log.levels.WARN, notifications[1].level)
+      assert.is_truthy(notifications[1].msg:find(':MP mount', 1, true))
+    end)
+
+    it('should leave the deprecated sync out of the picker', function()
+      local UI = require('micropython_nvim.ui')
+      local original_select = UI.select
+      local offered
+      UI.select = function(items)
+        offered = items
+      end
+
+      Commands.dispatch({})
+
+      UI.select = original_select
+      assert.is_true(vim.tbl_contains(offered, 'mount'))
+      assert.is_false(vim.tbl_contains(offered, 'sync'))
+    end)
+
     it('should report an unknown subcommand', function()
       local notifications, restore = helpers.mock_vim_notify()
       Commands.dispatch({ 'nope' })
@@ -107,7 +144,7 @@ describe('micropython_nvim.commands', function()
         'info',
         'mip',
         'flash',
-        'sync',
+        'mount',
         'reset',
         'hard_reset',
         'list_files',
@@ -123,6 +160,11 @@ describe('micropython_nvim.commands', function()
       }) do
         assert.is_true(vim.tbl_contains(names, name), name)
       end
+    end)
+
+    it('should not offer the deprecated sync alias', function()
+      assert.is_false(vim.tbl_contains(Commands.names(), 'sync'))
+      assert.same({}, Commands.complete('sy', 'MP sy', 5))
     end)
 
     it('should not offer a baud rate setting', function()

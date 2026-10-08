@@ -56,7 +56,7 @@ function M.run()
   _run_file(vim.api.nvim_buf_get_name(0), vim.api.nvim_buf_get_lines(0, 0, -1, false))
 end
 
-function M.sync()
+function M.mount()
   if not Utils.check_port_configured() then
     return
   end

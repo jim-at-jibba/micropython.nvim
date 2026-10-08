@@ -70,8 +70,13 @@ function M.install()
   require('micropython_nvim.project').install()
 end
 
+function M.mount()
+  require('micropython_nvim.run').mount()
+end
+
+---@deprecated Use `mount`
 function M.sync()
-  require('micropython_nvim.run').sync()
+  M.mount()
 end
 
 function M.soft_reset()

@@ -24,12 +24,12 @@ describe('micropython_nvim.run', function()
     end)
   end)
 
-  describe('sync', function()
+  describe('mount', function()
     it('should warn when port not configured', function()
       Config.set_port('')
       local notifications, restore = helpers.mock_vim_notify()
 
-      Run.sync()
+      Run.mount()
 
       restore()
       assert.is_true(#notifications > 0)
