@@ -37,6 +37,9 @@ test/
   *_spec.lua           # vusted test suites, one per module
 doc/
   micropython.nvim.txt # Help documentation
+demo/
+  MANUAL_TESTS.md      # Manual test suite for real devices (Pico, Badger 2350)
+  project/             # Demo project the manual tests run against
 ```
 
 ### Module Pattern
