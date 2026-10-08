@@ -11,7 +11,7 @@ Usage with micropython.nvim:
   4. Run :MP run_main to run main.py on device
 
 For live development:
-  - Run :MP sync to mount this directory on device
+  - Run :MP mount to mount this directory on device
   - Changes to local files are immediately available on device
 """
 

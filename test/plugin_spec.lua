@@ -106,7 +106,11 @@ describe('micropython_nvim', function()
       assert.is_function(M.install)
     end)
 
-    it('should have sync', function()
+    it('should have mount', function()
+      assert.is_function(M.mount)
+    end)
+
+    it('should keep sync as an alias of mount', function()
       assert.is_function(M.sync)
     end)
 

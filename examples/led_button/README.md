@@ -30,11 +30,11 @@ led_button/
 3. Run `:MP upload_all` to upload all files, including `lib/`
 4. Run `:MP run_main` to run `main.py`
 
-### Live Development with `:MP sync`
+### Live Development with `:MP mount`
 
 For rapid development, use the mount feature:
 
-1. Run `:MP sync` to mount this directory on the device
+1. Run `:MP mount` to mount this directory on the device
 2. The local `lib/` directory becomes available as `/remote/lib/` on device
 3. Edit files locally - changes are immediately available
 4. Use `:MP repl` and run `import main` to test
@@ -45,7 +45,7 @@ For rapid development, use the mount feature:
 |---------|-------------|
 | `:MP upload_all` | Upload all project files to device |
 | `:MP run_main` | Run the local main.py on the device |
-| `:MP sync` | Mount local directory for live development |
+| `:MP mount` | Mount local directory for live development |
 | `:MP repl` | Open interactive REPL |
 | `:MP list_files` | Show files on device |
 

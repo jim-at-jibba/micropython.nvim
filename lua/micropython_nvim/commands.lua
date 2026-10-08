@@ -1,10 +1,15 @@
 local M = {}
 
+local state = {
+  sync_deprecation_shown = false,
+}
+
 ---@class MicroPython.Subcommand
 ---@field desc string Shown in the :MP picker
 ---@field impl fun(args: string[], range?: MicroPython.Range) Called with the arguments after the subcommand name
 ---@field complete? fun(arglead: string, index: integer): string[] Completes argument `index` (1-based)
 ---@field range? boolean Accepts a line range, as in :'<,'>MP send
+---@field hidden? boolean Still runs, but is left out of completion and the picker
 
 ---@class MicroPython.Range
 ---@field line1 integer
@@ -66,7 +71,22 @@ M.subcommands = {
       return require('micropython_nvim.flash').complete(arglead, index)
     end,
   },
-  sync = { desc = 'Mount the project directory on the device', impl = _facade('sync') },
+  mount = { desc = 'Mount the project directory on the device', impl = _facade('mount') },
+  sync = {
+    desc = 'Deprecated: use mount',
+    hidden = true,
+    impl = function()
+      if not state.sync_deprecation_shown then
+        state.sync_deprecation_shown = true
+        vim.notify(
+          ':MP sync is deprecated and will be removed; use :MP mount',
+          vim.log.levels.WARN,
+          { title = 'micropython.nvim' }
+        )
+      end
+      require('micropython_nvim').mount()
+    end,
+  },
   reset = { desc = 'Soft reset the device', impl = _facade('soft_reset') },
   hard_reset = { desc = 'Hard reset the device', impl = _facade('hard_reset') },
   list_files = { desc = 'List files on the device', impl = _facade('list_files') },
@@ -86,9 +106,12 @@ M.subcommands = {
   },
 }
 
+---Names of the subcommands to offer, leaving out hidden ones
 ---@return string[]
 function M.names()
-  local names = vim.tbl_keys(M.subcommands)
+  local names = vim.tbl_filter(function(name)
+    return not M.subcommands[name].hidden
+  end, vim.tbl_keys(M.subcommands))
   table.sort(names)
   return names
 end
