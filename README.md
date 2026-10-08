@@ -43,7 +43,7 @@ Upgrading from v2? See [Migrating from v2](#migrating-from-v2).
 
 - **Run** local python files on your micro-controller
 - **Upload** local python files to your micro-controller (including recursive directory upload)
-- **Sync** mount local directory for live development without uploading
+- **Mount** your local directory for live development without uploading
 - **REPL** in a persistent split: send the current line, a selection or the whole buffer, and stop running code
 - **File browser** - browse, edit, delete, download and create files and folders on the device
 - **Device management** - list connected devices, reset, show device info and set its clock
