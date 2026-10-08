@@ -1,0 +1,3 @@
+# v2 config with a BAUD line, which v3 ignores
+PORT=auto
+BAUD=9600
