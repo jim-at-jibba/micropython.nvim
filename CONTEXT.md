@@ -90,6 +90,8 @@ MicroPython's package installer; installs libraries straight onto the **Device**
 - A **Project** targets one **Device** at a time through one **Port**
 - **Upload** and **Mount** both make **Project** code available to a **Device**: **Upload** copies
   it and it survives a **Hard reset**; **Mount** lasts only for the session
+- Every command that talks to the **Device**, even just listing its **Device files**, first
+  **Interrupts** whatever code is running on it, and needs the **Port** to be free
 - **Stubs** live in the **Project** for the editor; libraries installed with **mip** live on the
   **Device** for the code
 
