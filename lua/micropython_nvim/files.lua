@@ -65,8 +65,8 @@ end
 ---@param question string
 ---@param on_yes fun()
 local function _confirm(question, on_yes)
-  UI.select({ 'Yes', 'No' }, { prompt = question }, function(choice)
-    if choice == 'Yes' then
+  UI.confirm(question, function(yes)
+    if yes then
       on_yes()
     end
   end)
