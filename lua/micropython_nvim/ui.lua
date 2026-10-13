@@ -35,4 +35,13 @@ function M.select(items, opts, on_choice)
   end
 end
 
+---Ask a yes/no question through the picker
+---@param question string
+---@param on_answer fun(yes: boolean) true only for an explicit Yes; No and cancel give false
+function M.confirm(question, on_answer)
+  M.select({ 'Yes', 'No' }, { prompt = question }, function(choice)
+    on_answer(choice == 'Yes')
+  end)
+end
+
 return M

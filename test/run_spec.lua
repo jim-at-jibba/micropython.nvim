@@ -185,6 +185,85 @@ describe('micropython_nvim.run', function()
       assert.same({ 'main.py', 'lib/' }, chosen)
     end)
 
+    describe('erase confirmation', function()
+      local prompts
+      local answer
+      local notifications
+
+      before_each(function()
+        prompts = {}
+        answer = 'Yes'
+        notifications = helpers.mock_vim_notify()
+        require('micropython_nvim.ui').select = function(_, opts, cb)
+          table.insert(prompts, opts.prompt)
+          cb(answer)
+        end
+      end)
+
+      ---List main.py and lib/ on the device, then pick one
+      ---@param choice string
+      local function erase_one(choice)
+        require('micropython_nvim.ui').select = function(items, opts, cb)
+          table.insert(prompts, opts.prompt)
+          cb(items[1] == 'Yes' and answer or choice)
+        end
+        Run.erase_one()
+        calls[1].opts.on_stdout(1, { '         139 main.py', '           0 lib/', '' })
+        calls[1].opts.on_stderr(1, { '' })
+        calls[1].opts.on_exit(1, 0)
+      end
+
+      local function cancelled()
+        for _, n in ipairs(notifications) do
+          if n.msg:find('nothing was deleted', 1, true) then
+            return true
+          end
+        end
+        return false
+      end
+
+      it('erase_all should ask, naming the port, and erase on Yes', function()
+        Run.erase_all()
+        assert.same({ 'Delete every file on /dev/ttyUSB0?' }, prompts)
+        assert.equals(1, #terminal_commands)
+        assert.is_truthy(terminal_commands[1]:find("'rm' '-r' ':'", 1, true))
+      end)
+
+      it('erase_all should name an auto port as the auto-detected device', function()
+        Config.set_port('auto')
+        Run.erase_all()
+        assert.same({ 'Delete every file on the auto-detected device?' }, prompts)
+      end)
+
+      for _, case in ipairs({ { 'No', 'No' }, { 'cancel', nil } }) do
+        it('erase_all should delete nothing on ' .. case[1], function()
+          answer = case[2]
+          Run.erase_all()
+          assert.equals(0, #terminal_commands)
+          assert.is_true(cancelled())
+        end)
+
+        it('erase_one should delete nothing on ' .. case[1], function()
+          answer = case[2]
+          erase_one('main.py')
+          assert.equals(1, #calls)
+          assert.is_true(cancelled())
+        end)
+      end
+
+      it('erase_one should ask about a file and delete it on Yes', function()
+        erase_one('main.py')
+        assert.equals('Delete main.py?', prompts[2])
+        assert.same({ 'fs', 'rm', ':main.py' }, tail(calls[2], 3))
+      end)
+
+      it('erase_one should ask about a folder and its contents', function()
+        erase_one('lib/')
+        assert.equals('Delete lib/ and everything in it?', prompts[2])
+        assert.same({ 'fs', 'rm', '-r', ':lib/' }, tail(calls[2], 4))
+      end)
+    end)
+
     describe('run_main', function()
       ---@param fn fun(dir: string)
       local function in_project(fn)

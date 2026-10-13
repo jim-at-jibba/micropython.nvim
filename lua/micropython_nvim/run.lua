@@ -2,8 +2,15 @@ local Utils = require('micropython_nvim.utils')
 local Mpremote = require('micropython_nvim.mpremote')
 local Terminal = require('micropython_nvim.terminal')
 local UI = require('micropython_nvim.ui')
+local Config = require('micropython_nvim.config')
 
 local M = {}
+
+local function _notify_cancelled()
+  vim.notify('Erase cancelled: nothing was deleted', vim.log.levels.INFO, {
+    title = 'micropython.nvim',
+  })
+end
 
 ---@param on_files fun(files: string[])
 local function _get_device_files(on_files)
@@ -87,10 +94,19 @@ function M.erase_all()
     return
   end
 
-  local command = Mpremote.command({ 'fs', 'rm', '-r', ':' })
-    .. ' 2>&1; '
-    .. Utils.PRESS_ENTER_PROMPT
-  Terminal.open(command)
+  local port = Config.get_port()
+  local device = port == 'auto' and 'the auto-detected device' or port
+  UI.confirm('Delete every file on ' .. device .. '?', function(yes)
+    if not yes then
+      _notify_cancelled()
+      return
+    end
+
+    local command = Mpremote.command({ 'fs', 'rm', '-r', ':' })
+      .. ' 2>&1; '
+      .. Utils.PRESS_ENTER_PROMPT
+    Terminal.open(command)
+  end)
 end
 
 function M.erase_one()
@@ -112,8 +128,17 @@ function M.erase_one()
       end
 
       local is_dir = choice:match('/$')
-      local args = is_dir and { 'fs', 'rm', '-r', ':' .. choice } or { 'fs', 'rm', ':' .. choice }
-      Mpremote.run(args, { name = 'Delete ' .. choice })
+      local question = is_dir and 'Delete ' .. choice .. ' and everything in it?'
+        or 'Delete ' .. choice .. '?'
+      UI.confirm(question, function(yes)
+        if not yes then
+          _notify_cancelled()
+          return
+        end
+
+        local args = is_dir and { 'fs', 'rm', '-r', ':' .. choice } or { 'fs', 'rm', ':' .. choice }
+        Mpremote.run(args, { name = 'Delete ' .. choice })
+      end)
     end)
   end)
 end

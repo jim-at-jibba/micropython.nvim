@@ -1023,18 +1023,21 @@ mpflash)`. If uv lives in the same folder, other commands may fail until you res
 
 ### E1. Erase one file
 
-1. Run `:MP erase` and pick `main.py`.
-2. Run `:MP list_files`.
+1. Run `:MP erase`, pick `main.py`, and answer **No** to `Delete main.py?`.
+2. Run `:MP erase` again, pick `main.py`, and answer **Yes**.
+3. Run `:MP list_files`.
 
-**Expected:** a picker of the device's top-level files and folders only (folders end in `/`). The
-file is deleted with a background notification. To delete a nested file, use `d` in `:MP files`.
+**Expected:** a picker of the device's top-level files and folders only (folders end in `/`). After
+No, a notification says `Erase cancelled: nothing was deleted` and `main.py` is still there. After
+Yes, the file is deleted with a background notification. To delete a nested file, use `d` in `:MP files`.
 
 - [ ] Pico  - [ ] Badger
 - Notes:
 
 ### E2. Erase a folder
 
-1. Run `:MP erase` and pick `scratch/`.
+1. Run `:MP erase`, pick `scratch/`, and answer **Yes** to
+   `Delete scratch/ and everything in it?`.
 
 **Expected:** the folder and its contents are deleted.
 
@@ -1043,10 +1046,12 @@ file is deleted with a background notification. To delete a nested file, use `d`
 
 ### E3. Erase everything (Pico)
 
-1. Run `:MP erase_all`.
-2. Run `:MP list_files`.
+1. Run `:MP erase_all` and cancel the `Delete every file on <port>?` question (`<Esc>`).
+2. Run `:MP erase_all` again and answer **Yes**.
+3. Run `:MP list_files`.
 
-**Expected:** a terminal showing mpremote removing every file. The device is empty afterwards.
+**Expected:** cancelling deletes nothing and says `Erase cancelled: nothing was deleted`. After
+Yes, a terminal shows mpremote removing every file. The device is empty afterwards.
 For the Badger, see G7.
 
 - [ ] Pico
@@ -1307,7 +1312,7 @@ Badger apps. The demo's `lib/device.py` avoids this by using `getattr(builtins, 
 **This deletes your files on `/` and the launcher's settings in `/state/`.** The apps in `/system`
 should survive.
 
-1. Run `:MP erase_all`.
+1. Run `:MP erase_all` and answer **Yes** to `Delete every file on <port>?`.
 2. Run `:MP list_files`.
 3. Press RESET.
 
