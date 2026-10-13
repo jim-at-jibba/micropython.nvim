@@ -200,12 +200,14 @@ function M.create_file_with_template(path, template)
   return true
 end
 
+---Set `KEY=value` in a config file: only lines that assign the key are replaced, comments
+---and other lines are kept, and the line is appended when the key isn't set yet
 ---@param file_path string
----@param needle string
----@param replacement string
+---@param key string
+---@param value string
 ---@return boolean
-function M.replace_line(file_path, needle, replacement)
-  M.debug_print(string.format('Replacing line in file: %s %s %s', file_path, needle, replacement))
+function M.set_config_value(file_path, key, value)
+  M.debug_print(string.format('Setting %s=%s in %s', key, value, file_path))
 
   if vim.fn.filereadable(file_path) ~= 1 then
     vim.notify(
@@ -227,12 +229,19 @@ function M.replace_line(file_path, needle, replacement)
     return false
   end
 
+  local key_pattern = '^%s*' .. vim.pesc(key) .. '%s*='
+  local replacement = key .. '=' .. value
+  local found = false
   for line in io.lines(file_path) do
-    if not line:match(needle) then
+    if not line:match(key_pattern) then
       temp_file:write(line .. '\n')
-    else
+    elseif not found then
       temp_file:write(replacement .. '\n')
+      found = true
     end
+  end
+  if not found then
+    temp_file:write(replacement .. '\n')
   end
   temp_file:close()
 

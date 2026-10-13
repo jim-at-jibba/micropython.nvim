@@ -149,47 +149,70 @@ describe('micropython_nvim.utils', function()
     end)
   end)
 
-  describe('replace_line', function()
-    it('should replace matching line', function()
+  describe('set_config_value', function()
+    local function write_and_set(content, key, value)
+      local result, after
       helpers.with_temp_dir(function(tmpdir)
         local filepath = tmpdir .. '/config.txt'
         local file = io.open(filepath, 'w')
-        file:write('PORT=auto\nBAUD=115200\n')
+        file:write(content)
         file:close()
 
-        local result = Utils.replace_line(filepath, 'PORT', 'PORT=/dev/ttyUSB0')
-
-        assert.is_true(result)
+        result = Utils.set_config_value(filepath, key, value)
 
         file = io.open(filepath, 'r')
-        local content = file:read('*a')
+        after = file:read('*a')
         file:close()
-
-        assert.is_true(content:find('PORT=/dev/ttyUSB0') ~= nil)
-        assert.is_nil(content:find('PORT=auto'))
       end)
+      return result, after
+    end
+
+    it('should replace the key line and preserve other lines', function()
+      local result, content = write_and_set('PORT=auto\nBAUD=115200\n', 'PORT', '/dev/ttyUSB0')
+
+      assert.is_true(result)
+      assert.equals('PORT=/dev/ttyUSB0\nBAUD=115200\n', content)
     end)
 
-    it('should preserve non-matching lines', function()
-      helpers.with_temp_dir(function(tmpdir)
-        local filepath = tmpdir .. '/config.txt'
-        local file = io.open(filepath, 'w')
-        file:write('PORT=auto\nBAUD=115200\n')
-        file:close()
+    it('should keep the comment in the :MP init config', function()
+      local Project = require('micropython_nvim.project')
+      local _, content = write_and_set(Project.TEMPLATES.micropython_config, 'PORT', '/dev/ttyACM0')
 
-        Utils.replace_line(filepath, 'PORT', 'PORT=/dev/ttyUSB0')
+      assert.equals(
+        Project.TEMPLATES.micropython_config:gsub('PORT=auto', 'PORT=/dev/ttyACM0'),
+        content
+      )
+    end)
 
-        file = io.open(filepath, 'r')
-        local content = file:read('*a')
-        file:close()
+    it('should never rewrite lines that only mention the key', function()
+      local _, content =
+        write_and_set('# set PORT below\nMY_PORT=x\nPORTS=y\n', 'PORT', '/dev/ttyACM0')
 
-        assert.is_true(content:find('BAUD=115200') ~= nil)
-      end)
+      assert.equals('# set PORT below\nMY_PORT=x\nPORTS=y\nPORT=/dev/ttyACM0\n', content)
+    end)
+
+    it('should append the key when it is not set', function()
+      local result, content = write_and_set('BAUD=115200\n', 'PORT', 'auto')
+
+      assert.is_true(result)
+      assert.equals('BAUD=115200\nPORT=auto\n', content)
+    end)
+
+    it('should match the key with surrounding whitespace', function()
+      local _, content = write_and_set('  PORT = auto\n', 'PORT', '/dev/ttyACM0')
+
+      assert.equals('PORT=/dev/ttyACM0\n', content)
+    end)
+
+    it('should collapse duplicate key lines into one', function()
+      local _, content = write_and_set('PORT=a\nBAUD=1\nPORT=b\n', 'PORT', 'c')
+
+      assert.equals('PORT=c\nBAUD=1\n', content)
     end)
 
     it('should return false for non-existent file', function()
       local _, restore = helpers.mock_vim_notify()
-      local result = Utils.replace_line('/nonexistent/file.txt', 'needle', 'replacement')
+      local result = Utils.set_config_value('/nonexistent/file.txt', 'KEY', 'value')
       restore()
 
       assert.is_false(result)

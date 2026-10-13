@@ -91,7 +91,7 @@ function M.set_port()
 
       local config_path = Utils.get_config_path()
       if Utils.config_exists() then
-        local result = Utils.replace_line(config_path, 'PORT', 'PORT=' .. choice)
+        local result = Utils.set_config_value(config_path, 'PORT', choice)
         if result then
           vim.notify('Port set to: ' .. choice, vim.log.levels.INFO, { title = 'micropython.nvim' })
         else
