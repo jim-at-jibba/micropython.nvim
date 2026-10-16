@@ -711,11 +711,25 @@ is acceptable. A hang, or a broken REPL afterwards, is not.
 - [ ] Pico
 - Notes:
 
-### L9. Close and reopen
+### L9. Hide and reopen, quit and reopen
 
-1. Close the REPL window (`:q` in it), then run `:MP repl` again.
+1. In the REPL, type `x = 42`.
+2. Hide the REPL window (`:q` in it), then run `:MP repl` again.
+3. Type `x`.
+4. Quit the REPL with `Ctrl-]`, then run `:MP repl` again.
+5. Type `x`.
+6. Press `Ctrl-D` at the `>>>` prompt to **soft reset**, then type `x`.
 
-**Expected:** a fresh REPL that works.
+**Expected:**
+
+- Hiding the window with `:q` keeps the REPL running. Step 2 brings back the same session, with
+  the scrollback from step 1 still there, and step 3 prints `42`.
+- `Ctrl-]` stops mpremote and frees the port. Step 4 starts a fresh REPL session: a new buffer,
+  without the earlier scrollback, at a `>>>` prompt.
+- A fresh session isn't a fresh interpreter: `mpremote repl` doesn't soft-reset the device, so
+  step 5 still prints `42`.
+- After the soft reset (`MPY: soft reboot`), step 6 fails with
+  `NameError: name 'x' isn't defined`.
 
 - [ ] Pico
 - Notes:
